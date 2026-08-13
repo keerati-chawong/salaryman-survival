@@ -1,29 +1,34 @@
 extends Control
+## Turn-based demo battle. All HUD widgets are real Control nodes laid out by
+## containers, so nothing can overlap regardless of text length or UI scale.
 
 const MAIN_MENU := "res://scenes/MainMenu.tscn"
-const SAVE_PATH := "user://save.dat"
 
 const BOSS_MAX := 800
 const PLAYER_HP_MAX := 320
 const PLAYER_MP_MAX := 120
 const ITEM_MP_COST := 20
+const ITEM_HEAL := 50
 
-@onready var atk_btn: Button = $AtkButton
-@onready var item_btn: Button = $ItemButton
-@onready var def_btn: Button = $DefButton
-@onready var run_btn: Button = $RunButton
-@onready var back_btn: Button = $BackButton
+## Multiplier applied to the manager's damage, indexed by Settings.difficulty.
+const DIFFICULTY_DAMAGE := [0.7, 1.0, 1.35]
 
-@onready var boss_bar: ProgressBar = $BossHPBar
-@onready var player_hp_bar: ProgressBar = $PlayerHPBar
-@onready var player_mp_bar: ProgressBar = $PlayerMPBar
+@onready var atk_btn: TextureButton = $ActionGrid/AtkButton
+@onready var item_btn: TextureButton = $ActionGrid/ItemButton
+@onready var def_btn: TextureButton = $ActionGrid/DefButton
+@onready var run_btn: TextureButton = $ActionGrid/RunButton
 
-@onready var boss_hp_label: Label = $BossHPLabel
-@onready var player_hp_label: Label = $PlayerHPLabel
-@onready var player_mp_label: Label = $PlayerMPLabel
-@onready var message_label: Label = $MessageLabel
-@onready var background: TextureRect = $Background
+@onready var boss_bar: ProgressBar = $BossPanel/Rows/BarRow/BossHPBar
+@onready var boss_hp_label: Label = $BossPanel/Rows/BarRow/BossHPLabel
+@onready var player_hp_bar: ProgressBar = $PlayerPanel/Cols/Bars/HPRow/PlayerHPBar
+@onready var player_hp_label: Label = $PlayerPanel/Cols/Bars/HPRow/PlayerHPLabel
+@onready var player_mp_bar: ProgressBar = $PlayerPanel/Cols/Bars/MPRow/PlayerMPBar
+@onready var player_mp_label: Label = $PlayerPanel/Cols/Bars/MPRow/PlayerMPLabel
+
+@onready var message_label: Label = $MessagePanel/MessageLabel
+@onready var damage_popup: Label = $DamagePopup
 @onready var flash_overlay: ColorRect = $FlashOverlay
+@onready var background: TextureRect = $Background
 
 var boss_hp := BOSS_MAX
 var player_hp := PLAYER_HP_MAX
@@ -32,78 +37,130 @@ var defending := false
 var busy := false
 var battle_over := false
 
+var _hp_fill := StyleBoxFlat.new()
+var _boss_fill := StyleBoxFlat.new()
+
 
 func _ready() -> void:
-	_refresh_ui(true)
-	_set_message("What will you do?")
+	_setup_bar_styles()
 	background.pivot_offset = background.size / 2.0
-	for b: Button in [atk_btn, item_btn, def_btn, run_btn]:
-		b.mouse_entered.connect(_hover_overlay.bind(b, true))
-		b.mouse_exited.connect(_hover_overlay.bind(b, false))
+	_refresh(true)
+	_set_message("What will you do?")
+	if Settings.tutorial_tips:
+		_set_message("What will you do?  (ATK to strike, DEF to guard, ITEM for coffee, RUN to flee)")
 
 
-func _hover_overlay(b: Button, enter: bool) -> void:
-	create_tween().tween_property(b, "self_modulate:a", 0.14 if enter else 0.0, 0.1)
+## Each bar owns its own fill StyleBox so we can recolour it as HP drops
+## without mutating the shared theme resource.
+func _setup_bar_styles() -> void:
+	_boss_fill.bg_color = Color(0.78, 0.2, 0.24)
+	_boss_fill.set_corner_radius_all(2)
+	boss_bar.add_theme_stylebox_override("fill", _boss_fill)
+
+	_hp_fill.bg_color = Color(0.78, 0.2, 0.24)
+	_hp_fill.set_corner_radius_all(2)
+	player_hp_bar.add_theme_stylebox_override("fill", _hp_fill)
 
 
-func _shake(strength: float = 10.0, duration: float = 0.3) -> void:
-	var tween := create_tween()
-	var steps := 6
-	for i: int in steps:
-		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
-		tween.tween_property(self, "position", offset, duration / steps)
-	tween.tween_property(self, "position", Vector2.ZERO, duration / steps)
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
 
 
-func _punch(amount: float = 1.04, duration: float = 0.18) -> void:
-	var tween := create_tween()
-	tween.tween_property(background, "scale", Vector2(amount, amount), duration * 0.35)
-	tween.tween_property(background, "scale", Vector2.ONE, duration * 0.65)
+# ------------------------------------------------------------------- ui -----
 
+func _refresh(instant := false) -> void:
+	boss_hp_label.text = "%d / %d" % [maxi(boss_hp, 0), BOSS_MAX]
+	player_hp_label.text = "%d / %d" % [maxi(player_hp, 0), PLAYER_HP_MAX]
+	player_mp_label.text = "%d / %d" % [maxi(player_mp, 0), PLAYER_MP_MAX]
 
-func _flash(color: Color, peak_alpha: float = 0.35, duration: float = 0.35) -> void:
-	flash_overlay.color = Color(color.r, color.g, color.b, peak_alpha)
-	var tween := create_tween()
-	tween.tween_property(flash_overlay, "color:a", 0.0, duration)
-
-
-func _refresh_ui(instant := false) -> void:
-	boss_hp_label.text = "%d / %d" % [max(boss_hp, 0), BOSS_MAX]
-	player_hp_label.text = "%d / %d" % [max(player_hp, 0), PLAYER_HP_MAX]
-	player_mp_label.text = "%d / %d" % [max(player_mp, 0), PLAYER_MP_MAX]
 	if instant:
 		boss_bar.value = boss_hp
 		player_hp_bar.value = player_hp
 		player_mp_bar.value = player_mp
 	else:
-		create_tween().tween_property(boss_bar, "value", max(boss_hp, 0), 0.3)
-		create_tween().tween_property(player_hp_bar, "value", max(player_hp, 0), 0.3)
-		create_tween().tween_property(player_mp_bar, "value", max(player_mp, 0), 0.3)
+		var t := create_tween()
+		t.set_parallel(true)
+		t.tween_property(boss_bar, "value", maxf(boss_hp, 0), 0.3)
+		t.tween_property(player_hp_bar, "value", maxf(player_hp, 0), 0.3)
+		t.tween_property(player_mp_bar, "value", maxf(player_mp, 0), 0.3)
+
+	_recolour(_hp_fill, float(player_hp) / PLAYER_HP_MAX)
+	_recolour(_boss_fill, float(boss_hp) / BOSS_MAX)
+
+
+## Red when healthy, amber under 50%, deep red under 25%.
+func _recolour(box: StyleBoxFlat, ratio: float) -> void:
+	if ratio <= 0.25:
+		box.bg_color = Color(0.55, 0.1, 0.13)
+	elif ratio <= 0.5:
+		box.bg_color = Color(0.85, 0.45, 0.15)
+	else:
+		box.bg_color = Color(0.78, 0.2, 0.24)
 
 
 func _set_message(msg: String) -> void:
 	message_label.text = msg
 
 
-func _set_buttons_enabled(enabled: bool) -> void:
-	atk_btn.disabled = not enabled
-	item_btn.disabled = not enabled
-	def_btn.disabled = not enabled
-	run_btn.disabled = not enabled
+func _set_actions_enabled(on: bool) -> void:
+	for b: TextureButton in [atk_btn, item_btn, def_btn, run_btn]:
+		b.disabled = not on
 
+
+func _popup_damage(amount: int, at_top: bool) -> void:
+	if not Settings.show_damage:
+		return
+	damage_popup.text = "-%d" % amount
+	damage_popup.position = Vector2(950 if at_top else 300, 300 if at_top else 560)
+	damage_popup.modulate.a = 1.0
+	var start_y := damage_popup.position.y
+	damage_popup.position.y = start_y
+	var t := create_tween()
+	t.set_parallel(true)
+	t.tween_property(damage_popup, "position:y", start_y - 60.0, 0.7)
+	t.tween_property(damage_popup, "modulate:a", 0.0, 0.7)
+
+
+func _shake(strength: float, duration: float) -> void:
+	if not Settings.screen_shake:
+		return
+	var t := create_tween()
+	var steps := 6
+	for i: int in steps:
+		t.tween_property(self, "position",
+			Vector2(randf_range(-strength, strength), randf_range(-strength, strength)),
+			duration / steps)
+	t.tween_property(self, "position", Vector2.ZERO, duration / steps)
+
+
+func _punch(amount: float, duration: float) -> void:
+	var t := create_tween()
+	t.tween_property(background, "scale", Vector2(amount, amount), duration * 0.35)
+	t.tween_property(background, "scale", Vector2.ONE, duration * 0.65)
+
+
+func _flash(color: Color, peak: float, duration: float) -> void:
+	flash_overlay.color = Color(color.r, color.g, color.b, peak)
+	create_tween().tween_property(flash_overlay, "color:a", 0.0, duration)
+
+
+# --------------------------------------------------------------- actions ----
 
 func _on_atk_pressed() -> void:
 	if busy or battle_over:
 		return
 	busy = true
 	var dmg := randi_range(60, 110)
-	boss_hp = max(boss_hp - dmg, 0)
+	boss_hp = maxi(boss_hp - dmg, 0)
 	_set_message("You attack the manager for %d damage!" % dmg)
-	_refresh_ui()
+	_refresh()
+	_popup_damage(dmg, true)
 	_punch(1.05, 0.18)
 	_flash(Color.WHITE, 0.3, 0.2)
 	_shake(6.0, 0.2)
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.55).timeout
 	await _boss_turn()
 
 
@@ -127,10 +184,9 @@ func _on_item_pressed() -> void:
 		return
 	busy = true
 	player_mp -= ITEM_MP_COST
-	var heal := 50
-	player_hp = min(player_hp + heal, PLAYER_HP_MAX)
-	_set_message("You grab a coffee and recover %d HP." % heal)
-	_refresh_ui()
+	player_hp = mini(player_hp + ITEM_HEAL, PLAYER_HP_MAX)
+	_set_message("You grab a coffee and recover %d HP." % ITEM_HEAL)
+	_refresh()
 	_flash(Color(0.5, 0.9, 0.5), 0.25, 0.35)
 	_punch(1.02, 0.25)
 	await get_tree().create_timer(0.5).timeout
@@ -143,31 +199,38 @@ func _on_run_pressed() -> void:
 	busy = true
 	battle_over = true
 	_set_message("You clock out early and head for the exit...")
-	_set_buttons_enabled(false)
-	var tween := create_tween()
-	tween.tween_property(self, "position:x", 120.0, 0.5)
-	tween.parallel().tween_property(self, "modulate:a", 0.0, 0.8)
+	_set_actions_enabled(false)
+	var t := create_tween()
+	t.set_parallel(true)
+	t.tween_property(self, "position:x", 120.0, 0.5)
+	t.tween_property(self, "modulate:a", 0.0, 0.8)
 	await get_tree().create_timer(1.0).timeout
-	get_tree().change_scene_to_file(MAIN_MENU)
+	_leave()
 
 
 func _boss_turn() -> void:
 	if boss_hp <= 0:
 		await _win()
 		return
-	var dmg := randi_range(40, 70)
+
+	var scale: float = DIFFICULTY_DAMAGE[clampi(Settings.difficulty, 0, 2)]
+	var dmg := int(randi_range(40, 70) * scale)
 	if defending:
 		dmg = int(dmg * 0.5)
-	player_hp = max(player_hp - dmg, 0)
+	player_hp = maxi(player_hp - dmg, 0)
+
 	var msg := "The manager dumps %d damage worth of paperwork on you!" % dmg
 	if defending:
-		msg += " (Guard reduced the damage)"
+		msg += "  (Guard halved it)"
 	_set_message(msg)
 	defending = false
-	_refresh_ui()
+
+	_refresh()
+	_popup_damage(dmg, false)
 	_flash(Color(0.9, 0.2, 0.2), 0.32, 0.3)
 	_shake(10.0, 0.3)
-	await get_tree().create_timer(0.6).timeout
+
+	await get_tree().create_timer(0.65).timeout
 	if player_hp <= 0:
 		await _lose()
 	else:
@@ -177,23 +240,26 @@ func _boss_turn() -> void:
 func _win() -> void:
 	battle_over = true
 	_set_message("The Overworked Manager collapses! You survived the shift.")
-	_set_buttons_enabled(false)
+	_set_actions_enabled(false)
 	_flash(Color(1.0, 0.85, 0.3), 0.4, 0.6)
 	_punch(1.08, 0.5)
-	await get_tree().create_timer(1.6).timeout
-	get_tree().change_scene_to_file(MAIN_MENU)
+	await get_tree().create_timer(1.7).timeout
+	_leave()
 
 
 func _lose() -> void:
 	battle_over = true
 	_set_message("You couldn't keep up with the workload... Game over.")
-	_set_buttons_enabled(false)
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(SAVE_PATH)
+	_set_actions_enabled(false)
+	Settings.delete_save()
 	_flash(Color(0.1, 0.1, 0.1), 0.6, 1.2)
-	await get_tree().create_timer(1.8).timeout
+	await get_tree().create_timer(1.9).timeout
+	_leave()
+
+
+func _leave() -> void:
 	get_tree().change_scene_to_file(MAIN_MENU)
 
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file(MAIN_MENU)
+	_leave()

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d2ep7a1seqlb2"
-path="res://.godot/imported/options_scene.png-17cb34e753b8242e93109d623b45156d.ctex"
+uid="uid://bth6bnmqqad0a"
+path="res://.godot/imported/tab_language_hover.png-d30e03a4c676416f27c4cd060bb4cfac.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/backgrounds/options_scene.png"
-dest_files=["res://.godot/imported/options_scene.png-17cb34e753b8242e93109d623b45156d.ctex"]
+source_file="res://assets/ui/tab_language_hover.png"
+dest_files=["res://.godot/imported/tab_language_hover.png-d30e03a4c676416f27c4cd060bb4cfac.ctex"]
 
 [params]
 

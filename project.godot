@@ -18,11 +18,18 @@ config/name="Salaryman Survival"
 run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+
+Settings="*res://scripts/Settings.gd"
+
 [display]
 
 window/size/viewport_width=1536
 window/size/viewport_height=1024
+window/size/window_width_override=1280
+window/size/window_height_override=854
 window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
 
 [gui]
 

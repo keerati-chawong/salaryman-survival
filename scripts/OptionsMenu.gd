@@ -552,7 +552,7 @@ func _on_language_selected(idx: int) -> void:
 
 
 func _on_delete_save() -> void:
-	Settings.delete_save()
+	GameState.delete_save()
 	_show_toast("Save data deleted")
 
 

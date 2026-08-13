@@ -3,7 +3,6 @@ extends Node
 ## the shared theme's font scale, so every scene picks up option changes.
 
 const SAVE_PATH := "user://settings.cfg"
-const SAVE_GAME_PATH := "user://save.dat"
 const THEME: Theme = preload("res://theme/ui_theme.tres")
 
 const RESOLUTIONS: Array[Vector2i] = [
@@ -175,22 +174,6 @@ func reset_defaults() -> void:
 	language_index = 0
 	difficulty = 1
 	ui_scale = 100.0
-
-
-func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_GAME_PATH)
-
-
-func write_save() -> void:
-	var f := FileAccess.open(SAVE_GAME_PATH, FileAccess.WRITE)
-	if f:
-		f.store_string("1")
-		f.close()
-
-
-func delete_save() -> void:
-	if has_save():
-		DirAccess.remove_absolute(SAVE_GAME_PATH)
 
 
 func save_settings() -> void:

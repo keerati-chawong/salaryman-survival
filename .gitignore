@@ -1,0 +1,10 @@
+# Godot 4 editor cache/import artifacts
+.godot/
+
+# Godot mono-specific
+.mono/
+data_*/
+
+# OS junk
+.DS_Store
+Thumbs.db

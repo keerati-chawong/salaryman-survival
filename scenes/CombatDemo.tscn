@@ -1,0 +1,199 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/CombatDemo.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/combat_scene.png" id="2_bg"]
+
+[sub_resource type="StyleBoxFlat" id="hp_bg"]
+bg_color = Color(0.1, 0.04, 0.045, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.55, 0.6, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+
+[sub_resource type="StyleBoxFlat" id="mp_bg"]
+bg_color = Color(0.1, 0.07, 0.03, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.55, 0.6, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+
+[sub_resource type="StyleBoxFlat" id="hp_fill"]
+bg_color = Color(0.78, 0.2, 0.24, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[sub_resource type="StyleBoxFlat" id="mp_fill"]
+bg_color = Color(0.88, 0.58, 0.17, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[node name="CombatDemo" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackButton" type="Button" parent="."]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 140.0
+offset_bottom = 64.0
+text = "← Back"
+
+[node name="BossHPBar" type="ProgressBar" parent="."]
+offset_left = 130.0
+offset_top = 118.0
+offset_right = 665.0
+offset_bottom = 148.0
+theme_override_styles/background = SubResource("hp_bg")
+theme_override_styles/fill = SubResource("hp_fill")
+max_value = 800.0
+value = 800.0
+show_percentage = false
+
+[node name="BossHPCover" type="ColorRect" parent="."]
+offset_left = 675.0
+offset_top = 112.0
+offset_right = 845.0
+offset_bottom = 152.0
+color = Color(0.098, 0.106, 0.122, 1)
+
+[node name="BossHPLabel" type="Label" parent="."]
+offset_left = 675.0
+offset_top = 112.0
+offset_right = 845.0
+offset_bottom = 152.0
+theme_override_font_sizes/font_size = 26
+vertical_alignment = 1
+text = "800 / 800"
+
+[node name="PlayerHPBar" type="ProgressBar" parent="."]
+offset_left = 300.0
+offset_top = 752.0
+offset_right = 565.0
+offset_bottom = 782.0
+theme_override_styles/background = SubResource("hp_bg")
+theme_override_styles/fill = SubResource("hp_fill")
+max_value = 320.0
+value = 320.0
+show_percentage = false
+
+[node name="PlayerHPCover" type="ColorRect" parent="."]
+offset_left = 578.0
+offset_top = 748.0
+offset_right = 745.0
+offset_bottom = 786.0
+color = Color(0.098, 0.106, 0.122, 1)
+
+[node name="PlayerHPLabel" type="Label" parent="."]
+offset_left = 578.0
+offset_top = 748.0
+offset_right = 745.0
+offset_bottom = 786.0
+theme_override_font_sizes/font_size = 22
+vertical_alignment = 1
+text = "320 / 320"
+
+[node name="PlayerMPBar" type="ProgressBar" parent="."]
+offset_left = 300.0
+offset_top = 812.0
+offset_right = 565.0
+offset_bottom = 842.0
+theme_override_styles/background = SubResource("mp_bg")
+theme_override_styles/fill = SubResource("mp_fill")
+max_value = 120.0
+value = 120.0
+show_percentage = false
+
+[node name="PlayerMPCover" type="ColorRect" parent="."]
+offset_left = 578.0
+offset_top = 808.0
+offset_right = 745.0
+offset_bottom = 846.0
+color = Color(0.098, 0.106, 0.122, 1)
+
+[node name="PlayerMPLabel" type="Label" parent="."]
+offset_left = 578.0
+offset_top = 808.0
+offset_right = 745.0
+offset_bottom = 846.0
+theme_override_font_sizes/font_size = 22
+vertical_alignment = 1
+text = "120 / 120"
+
+[node name="MessageCover" type="ColorRect" parent="."]
+offset_left = 30.0
+offset_top = 897.0
+offset_right = 1506.0
+offset_bottom = 975.0
+color = Color(0.043, 0.043, 0.055, 1)
+
+[node name="MessageLabel" type="Label" parent="."]
+offset_left = 50.0
+offset_top = 897.0
+offset_right = 1486.0
+offset_bottom = 975.0
+theme_override_font_sizes/font_size = 24
+autowrap_mode = 3
+vertical_alignment = 1
+text = "What will you do?"
+
+[node name="AtkButton" type="Button" parent="."]
+self_modulate = Color(1, 1, 1, 0)
+offset_left = 830.0
+offset_top = 575.0
+offset_right = 1160.0
+offset_bottom = 710.0
+
+[node name="ItemButton" type="Button" parent="."]
+self_modulate = Color(1, 1, 1, 0)
+offset_left = 1175.0
+offset_top = 575.0
+offset_right = 1500.0
+offset_bottom = 710.0
+
+[node name="DefButton" type="Button" parent="."]
+self_modulate = Color(1, 1, 1, 0)
+offset_left = 830.0
+offset_top = 725.0
+offset_right = 1160.0
+offset_bottom = 860.0
+
+[node name="RunButton" type="Button" parent="."]
+self_modulate = Color(1, 1, 1, 0)
+offset_left = 1175.0
+offset_top = 725.0
+offset_right = 1500.0
+offset_bottom = 860.0
+
+[node name="FlashOverlay" type="ColorRect" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 1, 1, 0)
+
+[connection signal="pressed" from="BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="AtkButton" to="." method="_on_atk_pressed"]
+[connection signal="pressed" from="ItemButton" to="." method="_on_item_pressed"]
+[connection signal="pressed" from="DefButton" to="." method="_on_def_pressed"]
+[connection signal="pressed" from="RunButton" to="." method="_on_run_pressed"]

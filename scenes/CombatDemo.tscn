@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://scripts/CombatDemo.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/combat_room.png" id="2_bg"]
@@ -19,6 +19,9 @@
 [ext_resource type="Texture2D" path="res://assets/ui/btn_run_hover.png" id="17_run_h"]
 [ext_resource type="Texture2D" path="res://assets/ui/btn_run_pressed.png" id="18_run_p"]
 [ext_resource type="Texture2D" path="res://assets/ui/btn_run_disabled.png" id="19_run_d"]
+[ext_resource type="Texture2D" path="res://assets/characters/player.png" id="20_player"]
+[ext_resource type="Texture2D" path="res://assets/characters/boss.png" id="21_boss"]
+[ext_resource type="Texture2D" path="res://assets/characters/shadow.png" id="22_shadow"]
 
 [sub_resource type="StyleBoxFlat" id="mp_fill"]
 bg_color = Color(0.88, 0.58, 0.17, 1)
@@ -37,6 +40,48 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BossShadow" type="TextureRect" parent="."]
+modulate = Color(1, 1, 1, 0.55)
+mouse_filter = 2
+offset_left = 1030.0
+offset_top = 461.0
+offset_right = 1198.0
+offset_bottom = 509.0
+texture = ExtResource("22_shadow")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PlayerShadow" type="TextureRect" parent="."]
+modulate = Color(1, 1, 1, 0.55)
+mouse_filter = 2
+offset_left = 333.0
+offset_top = 702.0
+offset_right = 489.0
+offset_bottom = 746.0
+texture = ExtResource("22_shadow")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Boss" type="TextureRect" parent="."]
+mouse_filter = 2
+offset_left = 1023.0
+offset_top = 152.0
+offset_right = 1204.0
+offset_bottom = 485.0
+texture = ExtResource("21_boss")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Player" type="TextureRect" parent="."]
+mouse_filter = 2
+offset_left = 327.0
+offset_top = 403.0
+offset_right = 494.0
+offset_bottom = 726.0
+texture = ExtResource("20_player")
 expand_mode = 1
 stretch_mode = 0
 

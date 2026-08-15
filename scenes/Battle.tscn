@@ -1,0 +1,258 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/Battle.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/combat_room.png" id="2_bg"]
+[ext_resource type="Texture2D" path="res://assets/characters/player.png" id="3_player"]
+[ext_resource type="Texture2D" path="res://assets/characters/shadow.png" id="4_shadow"]
+
+[sub_resource type="StyleBoxFlat" id="anger_fill"]
+bg_color = Color(0.92, 0.6, 0.16, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[node name="Battle" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="EnemyShadow" type="TextureRect" parent="."]
+modulate = Color(1, 1, 1, 0.55)
+mouse_filter = 2
+offset_left = 1030.0
+offset_top = 461.0
+offset_right = 1198.0
+offset_bottom = 509.0
+texture = ExtResource("4_shadow")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PlayerShadow" type="TextureRect" parent="."]
+modulate = Color(1, 1, 1, 0.55)
+mouse_filter = 2
+offset_left = 333.0
+offset_top = 702.0
+offset_right = 489.0
+offset_bottom = 746.0
+texture = ExtResource("4_shadow")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Enemy" type="TextureRect" parent="."]
+mouse_filter = 2
+offset_left = 1023.0
+offset_top = 152.0
+offset_right = 1204.0
+offset_bottom = 485.0
+pivot_offset = Vector2(90.5, 333)
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Player" type="TextureRect" parent="."]
+mouse_filter = 2
+offset_left = 327.0
+offset_top = 403.0
+offset_right = 494.0
+offset_bottom = 726.0
+texture = ExtResource("3_player")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="EnemyPanel" type="PanelContainer" parent="."]
+offset_left = 24.0
+offset_top = 26.0
+offset_right = 892.0
+offset_bottom = 176.0
+
+[node name="Rows" type="VBoxContainer" parent="EnemyPanel"]
+theme_override_constants/separation = 8
+
+[node name="TitleRow" type="HBoxContainer" parent="EnemyPanel/Rows"]
+theme_override_constants/separation = 16
+
+[node name="EnemyName" type="Label" parent="EnemyPanel/Rows/TitleRow"]
+size_flags_horizontal = 3
+theme_type_variation = &"BigStatLabel"
+text = "THE ROOKIE"
+
+[node name="EnemyRole" type="Label" parent="EnemyPanel/Rows/TitleRow"]
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.75, 0.78, 0.84, 1)
+vertical_alignment = 1
+text = "Intern"
+
+[node name="BarRow" type="HBoxContainer" parent="EnemyPanel/Rows"]
+theme_override_constants/separation = 14
+
+[node name="Tag" type="Label" parent="EnemyPanel/Rows/BarRow"]
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.91, 0.36, 0.38, 1)
+text = "HP"
+
+[node name="EnemyHPBar" type="ProgressBar" parent="EnemyPanel/Rows/BarRow"]
+custom_minimum_size = Vector2(0, 30)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 240.0
+value = 240.0
+show_percentage = false
+
+[node name="EnemyHPLabel" type="Label" parent="EnemyPanel/Rows/BarRow"]
+custom_minimum_size = Vector2(170, 0)
+theme_type_variation = &"BigStatLabel"
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "240 / 240"
+
+[node name="PlayerPanel" type="PanelContainer" parent="."]
+offset_left = 40.0
+offset_top = 686.0
+offset_right = 800.0
+offset_bottom = 872.0
+
+[node name="Cols" type="HBoxContainer" parent="PlayerPanel"]
+theme_override_constants/separation = 16
+
+[node name="Bars" type="VBoxContainer" parent="PlayerPanel/Cols"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HPRow" type="HBoxContainer" parent="PlayerPanel/Cols/Bars"]
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="PlayerPanel/Cols/Bars/HPRow"]
+custom_minimum_size = Vector2(112, 0)
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.91, 0.36, 0.38, 1)
+vertical_alignment = 1
+text = "PATIENCE"
+
+[node name="PatienceBar" type="ProgressBar" parent="PlayerPanel/Cols/Bars/HPRow"]
+custom_minimum_size = Vector2(0, 28)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 220.0
+value = 220.0
+show_percentage = false
+
+[node name="PatienceLabel" type="Label" parent="PlayerPanel/Cols/Bars/HPRow"]
+custom_minimum_size = Vector2(150, 0)
+theme_type_variation = &"StatLabel"
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "220 / 220"
+
+[node name="MPRow" type="HBoxContainer" parent="PlayerPanel/Cols/Bars"]
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="PlayerPanel/Cols/Bars/MPRow"]
+custom_minimum_size = Vector2(112, 0)
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.95, 0.66, 0.25, 1)
+vertical_alignment = 1
+text = "ANGER"
+
+[node name="AngerBar" type="ProgressBar" parent="PlayerPanel/Cols/Bars/MPRow"]
+custom_minimum_size = Vector2(0, 28)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("anger_fill")
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="AngerLabel" type="Label" parent="PlayerPanel/Cols/Bars/MPRow"]
+custom_minimum_size = Vector2(150, 0)
+theme_type_variation = &"StatLabel"
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "0 / 100"
+
+[node name="RankLabel" type="Label" parent="PlayerPanel/Cols/Bars"]
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
+text = "Rank: Intern"
+
+[node name="ActionPanel" type="PanelContainer" parent="."]
+offset_left = 820.0
+offset_top = 542.0
+offset_right = 1504.0
+offset_bottom = 870.0
+
+[node name="Rows" type="VBoxContainer" parent="ActionPanel"]
+theme_override_constants/separation = 10
+
+[node name="HintLabel" type="Label" parent="ActionPanel/Rows"]
+custom_minimum_size = Vector2(0, 26)
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
+autowrap_mode = 3
+text = "Hover a line to see what it does."
+
+[node name="WordGrid" type="GridContainer" parent="ActionPanel/Rows"]
+size_flags_vertical = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+columns = 2
+
+[node name="BiteButton" type="Button" parent="ActionPanel/Rows"]
+custom_minimum_size = Vector2(0, 46)
+theme_override_colors/font_color = Color(0.82, 0.84, 0.88, 1)
+text = "Bite your tongue   (free, +15 Anger)"
+
+[node name="ItemRow" type="HBoxContainer" parent="ActionPanel/Rows"]
+theme_override_constants/separation = 10
+
+[node name="MessagePanel" type="PanelContainer" parent="."]
+offset_left = 32.0
+offset_top = 886.0
+offset_right = 1504.0
+offset_bottom = 996.0
+
+[node name="MessageLabel" type="Label" parent="MessagePanel"]
+theme_type_variation = &"StatLabel"
+autowrap_mode = 3
+vertical_alignment = 1
+text = "Pick your words carefully."
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+offset_left = 910.0
+offset_top = 26.0
+offset_right = 1504.0
+offset_bottom = 74.0
+alignment = 2
+
+[node name="BackHint" type="Label" parent="TopBar"]
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
+vertical_alignment = 1
+text = "Esc - save & quit to menu"
+
+[node name="DamagePopup" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+offset_left = 940.0
+offset_top = 300.0
+offset_right = 1340.0
+offset_bottom = 360.0
+theme_type_variation = &"HeaderLabel"
+horizontal_alignment = 1
+
+[node name="FlashOverlay" type="ColorRect" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 1, 1, 0)
+
+[connection signal="pressed" from="ActionPanel/Rows/BiteButton" to="." method="_on_bite_pressed"]

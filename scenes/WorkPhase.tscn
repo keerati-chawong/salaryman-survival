@@ -1,0 +1,196 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/WorkPhase.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/menu_bg.png" id="2_bg"]
+[ext_resource type="Texture2D" path="res://assets/characters/player.png" id="3_player"]
+
+[sub_resource type="StyleBoxFlat" id="anger_fill"]
+bg_color = Color(0.92, 0.6, 0.16, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[sub_resource type="StyleBoxFlat" id="qte_fill"]
+bg_color = Color(0.45, 0.78, 0.95, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[node name="WorkPhase" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Dim" type="ColorRect" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.05, 0.08, 0.45)
+
+[node name="DocsLayer" type="Control" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Player" type="TextureRect" parent="."]
+mouse_filter = 2
+offset_left = 230.0
+offset_top = 470.0
+offset_right = 342.0
+offset_bottom = 686.0
+texture = ExtResource("3_player")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InsultLayer" type="Control" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="HUD" type="Control" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Objective" type="Label" parent="HUD"]
+offset_left = 48.0
+offset_top = 34.0
+offset_right = 1488.0
+offset_bottom = 74.0
+theme_type_variation = &"HeaderLabel"
+text = "Shift 1"
+
+[node name="Hint" type="Label" parent="HUD"]
+offset_left = 48.0
+offset_top = 82.0
+offset_right = 1488.0
+offset_bottom = 112.0
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
+text = "WASD to move"
+
+[node name="Stats" type="VBoxContainer" parent="HUD"]
+offset_left = 48.0
+offset_top = 852.0
+offset_right = 760.0
+offset_bottom = 976.0
+theme_override_constants/separation = 10
+
+[node name="PatienceRow" type="HBoxContainer" parent="HUD/Stats"]
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="HUD/Stats/PatienceRow"]
+custom_minimum_size = Vector2(120, 0)
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.91, 0.36, 0.38, 1)
+vertical_alignment = 1
+text = "PATIENCE"
+
+[node name="PatienceBar" type="ProgressBar" parent="HUD/Stats/PatienceRow"]
+custom_minimum_size = Vector2(360, 28)
+size_flags_vertical = 4
+max_value = 220.0
+value = 220.0
+show_percentage = false
+
+[node name="PatienceValue" type="Label" parent="HUD/Stats/PatienceRow"]
+custom_minimum_size = Vector2(150, 0)
+theme_type_variation = &"StatLabel"
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "220 / 220"
+
+[node name="AngerRow" type="HBoxContainer" parent="HUD/Stats"]
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="HUD/Stats/AngerRow"]
+custom_minimum_size = Vector2(120, 0)
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.95, 0.66, 0.25, 1)
+vertical_alignment = 1
+text = "ANGER"
+
+[node name="AngerBar" type="ProgressBar" parent="HUD/Stats/AngerRow"]
+custom_minimum_size = Vector2(360, 28)
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("anger_fill")
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="AngerValue" type="Label" parent="HUD/Stats/AngerRow"]
+custom_minimum_size = Vector2(150, 0)
+theme_type_variation = &"StatLabel"
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "0 / 100"
+
+[node name="QuotaRow" type="HBoxContainer" parent="HUD/Stats"]
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="HUD/Stats/QuotaRow"]
+custom_minimum_size = Vector2(120, 0)
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.85, 0.86, 0.9, 1)
+vertical_alignment = 1
+text = "DOCS"
+
+[node name="QuotaValue" type="Label" parent="HUD/Stats/QuotaRow"]
+theme_type_variation = &"StatLabel"
+vertical_alignment = 1
+text = "0 / 6"
+
+[node name="BackHint" type="Label" parent="HUD"]
+offset_left = 1180.0
+offset_top = 34.0
+offset_right = 1488.0
+offset_bottom = 64.0
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.7, 0.73, 0.78, 1)
+horizontal_alignment = 2
+text = "Esc - back to menu"
+
+[node name="QtePanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 588.0
+offset_top = 300.0
+offset_right = 948.0
+offset_bottom = 470.0
+
+[node name="Rows" type="VBoxContainer" parent="QtePanel"]
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="QtePanel/Rows"]
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+horizontal_alignment = 1
+text = "URGENT TASK!"
+
+[node name="KeyLabel" type="Label" parent="QtePanel/Rows"]
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 56
+horizontal_alignment = 1
+text = "Q"
+
+[node name="TimeBar" type="ProgressBar" parent="QtePanel/Rows"]
+custom_minimum_size = Vector2(0, 22)
+theme_override_styles/fill = SubResource("qte_fill")
+max_value = 2.2
+value = 2.2
+show_percentage = false
+
+[node name="Flash" type="ColorRect" parent="."]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 1, 1, 0)

@@ -118,7 +118,11 @@ func _spawn_document() -> void:
 	)
 	docs_layer.add_child(doc)
 
-	var bob := create_tween().set_loops()
+	# Bound to doc, not self, so the infinite-loop bob tween is auto-killed
+	# when the document is freed on pickup instead of erroring every frame
+	# trying to animate a dangling reference (Godot detects this as an
+	# "Infinite loop" tween error, which the Web export handles badly).
+	var bob := doc.create_tween().set_loops()
 	bob.tween_property(doc, "position:y", doc.position.y - 10.0, 0.7).set_trans(Tween.TRANS_SINE)
 	bob.tween_property(doc, "position:y", doc.position.y, 0.7).set_trans(Tween.TRANS_SINE)
 

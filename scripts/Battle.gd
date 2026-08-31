@@ -61,7 +61,13 @@ var _silenced := ""
 var _interrupted := false
 
 var _word_buttons: Dictionary = {}
-var _item_buttons: Dictionary = {}
+
+## The bag is one button on the utility row that opens a modal grid of item
+## icons; _backpack_slots maps item id -> {"btn", "icon", "count"}.
+var _backpack_button: Button
+var _backpack_overlay: Control
+var _backpack_hint: Label
+var _backpack_slots: Dictionary = {}
 
 var _player_home: Vector2
 var _enemy_home: Vector2
@@ -90,7 +96,8 @@ func _ready() -> void:
 	_setup_enemy_visuals()
 	_setup_bars()
 	_build_word_buttons()
-	_build_item_buttons()
+	_build_backpack_button()
+	_build_backpack_overlay()
 	bite_button.mouse_entered.connect(_show_utility_hint.bind("Bite Tongue: gain 15 Anger. Free to use, but ends your turn."))
 	bite_button.mouse_exited.connect(_hide_utility_hint)
 	_setup_sprites()
@@ -192,22 +199,161 @@ func _build_word_buttons() -> void:
 		_word_buttons[String(word["id"])] = btn
 
 
-func _build_item_buttons() -> void:
+## One button on the utility row instead of nine cramped ones. Its label
+## carries the total item count; the grid of icons lives in the overlay.
+func _build_backpack_button() -> void:
+	_backpack_button = Button.new()
+	_backpack_button.custom_minimum_size = Vector2(150, 42)
+	_backpack_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_backpack_button.add_theme_font_size_override("font_size", 12)
+	_backpack_button.add_theme_color_override("font_outline_color", Color(0.1, 0.12, 0.2, 1))
+	_backpack_button.add_theme_constant_override("outline_size", 2)
+	_backpack_button.text = "BAG"
+	_backpack_button.pressed.connect(_open_backpack)
+	_backpack_button.mouse_entered.connect(_show_utility_hint.bind("Open your bag to use a snack, drink, or your headphones."))
+	_backpack_button.mouse_exited.connect(_hide_utility_hint)
+	item_row.add_child(_backpack_button)
+
+
+## A modal grid of every item as an icon + count, built once and toggled with
+## _open_backpack()/_close_backpack(). A dim full-screen button behind it
+## closes the grid when the player clicks away.
+func _build_backpack_overlay() -> void:
+	_backpack_overlay = Control.new()
+	_backpack_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_backpack_overlay.visible = false
+	add_child(_backpack_overlay)
+
+	var dim := Button.new()
+	dim.flat = true
+	dim.focus_mode = Control.FOCUS_NONE
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var dim_style := StyleBoxFlat.new()
+	dim_style.bg_color = Color(0.02, 0.03, 0.05, 0.66)
+	for state: String in ["normal", "hover", "pressed", "focus"]:
+		dim.add_theme_stylebox_override(state, dim_style)
+	dim.pressed.connect(_close_backpack)
+	_backpack_overlay.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(760, 520)
+	panel.position = Vector2(768.0 - 380.0, 512.0 - 260.0)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.09, 0.11, 0.16, 0.98)
+	panel_style.border_color = Color(0.32, 0.42, 0.6, 0.9)
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(10)
+	panel_style.set_content_margin_all(22)
+	panel.add_theme_stylebox_override("panel", panel_style)
+	_backpack_overlay.add_child(panel)
+
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 16)
+	panel.add_child(rows)
+
+	var header := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "BAG"
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color(1, 0.86, 0.42))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.custom_minimum_size = Vector2(88, 38)
+	close_button.pressed.connect(_close_backpack)
+	header.add_child(close_button)
+	rows.add_child(header)
+
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 16)
+	rows.add_child(grid)
+
 	for id: String in GameData.ITEMS:
-		var item: Dictionary = GameData.ITEMS[id]
-		var btn := Button.new()
-		btn.flat = false
-		btn.custom_minimum_size = Vector2(82, 42)
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.clip_text = true
-		btn.add_theme_font_size_override("font_size", 12)
-		btn.add_theme_color_override("font_outline_color", Color(0.02, 0.025, 0.03, 1.0))
-		btn.add_theme_constant_override("outline_size", 4)
-		btn.pressed.connect(_on_item_pressed.bind(id))
-		btn.mouse_entered.connect(_show_utility_hint.bind("%s: %s" % [String(item["name"]), String(item["blurb"])]))
-		btn.mouse_exited.connect(_hide_utility_hint)
-		item_row.add_child(btn)
-		_item_buttons[id] = btn
+		grid.add_child(_build_backpack_slot(id, GameData.ITEMS[id]))
+
+	_backpack_hint = Label.new()
+	_backpack_hint.add_theme_font_size_override("font_size", 14)
+	_backpack_hint.add_theme_color_override("font_color", Color(0.8, 0.84, 0.92))
+	_backpack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_backpack_hint.custom_minimum_size = Vector2(0, 26)
+	_backpack_hint.text = "Hover an item to see what it does."
+	rows.add_child(_backpack_hint)
+
+
+## A slot is an icon TextureRect + a count Label laid on a flat Button, sized
+## by hand: Button isn't a Container, so nothing re-lays the children out.
+func _build_backpack_slot(id: String, item: Dictionary) -> Control:
+	const SLOT := Vector2(128, 132)
+
+	var btn := Button.new()
+	btn.custom_minimum_size = SLOT
+	btn.focus_mode = Control.FOCUS_NONE
+	var slot_normal := StyleBoxFlat.new()
+	slot_normal.bg_color = Color(0.13, 0.16, 0.22, 1.0)
+	slot_normal.set_corner_radius_all(8)
+	slot_normal.set_border_width_all(1)
+	slot_normal.border_color = Color(0.28, 0.34, 0.46, 0.8)
+	var slot_hover := slot_normal.duplicate() as StyleBoxFlat
+	slot_hover.bg_color = Color(0.2, 0.26, 0.36, 1.0)
+	slot_hover.border_color = Color(1.0, 0.82, 0.4, 0.9)
+	btn.add_theme_stylebox_override("normal", slot_normal)
+	btn.add_theme_stylebox_override("hover", slot_hover)
+	btn.add_theme_stylebox_override("pressed", slot_hover)
+	btn.add_theme_stylebox_override("disabled", slot_normal)
+	btn.pressed.connect(_use_from_backpack.bind(id))
+	var hint := "%s  -  %s" % [String(item["name"]), String(item["blurb"])]
+	btn.mouse_entered.connect(func() -> void: _backpack_hint.text = hint)
+	btn.mouse_exited.connect(func() -> void: _backpack_hint.text = "Hover an item to see what it does.")
+
+	var icon := TextureRect.new()
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture = load(String(item["icon"]))
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.position = Vector2((SLOT.x - 72.0) * 0.5, 12.0)
+	icon.size = Vector2(72, 72)
+	btn.add_child(icon)
+
+	var count := Label.new()
+	count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count.add_theme_font_size_override("font_size", 15)
+	count.add_theme_color_override("font_color", Color(0.95, 0.96, 1.0))
+	count.position = Vector2(0, SLOT.y - 30.0)
+	count.size = Vector2(SLOT.x, 24)
+	btn.add_child(count)
+
+	_backpack_slots[id] = {"btn": btn, "icon": icon, "count": count}
+	return btn
+
+
+func _open_backpack() -> void:
+	if _busy or _over:
+		return
+	_backpack_overlay.visible = true
+	_refresh_backpack()
+
+
+func _close_backpack() -> void:
+	_backpack_overlay.visible = false
+
+
+func _use_from_backpack(id: String) -> void:
+	_close_backpack()
+	_on_item_pressed(id)
+
+
+func _refresh_backpack() -> void:
+	for id: String in _backpack_slots:
+		var slot: Dictionary = _backpack_slots[id]
+		var count := GameState.item_count(id)
+		var blocked := _over or _busy or count <= 0
+		slot["count"].text = "x%d" % count
+		slot["btn"].disabled = blocked
+		slot["icon"].modulate = Color(1, 1, 1, 1) if not blocked else Color(1, 1, 1, 0.3)
 
 
 func _show_hint(text: String) -> void:
@@ -236,13 +382,13 @@ func _refresh_buttons() -> void:
 		var suffix := "  (silenced)" if _silenced == id else ""
 		btn.text = "%s%s\n%d Anger" % [String(word["short"]), suffix, int(word["cost"])]
 
-	for id: String in _item_buttons:
-		var item: Dictionary = GameData.ITEMS[id]
-		var btn: Button = _item_buttons[id]
-		var count := GameState.item_count(id)
-		var short_names := {"coffee": "COFFEE", "bubble_tea": "TEA", "headphones": "HEADPHONES"}
-		btn.text = "%s x%d" % [String(short_names.get(id, item["name"])), count]
-		btn.disabled = _over or _busy or count <= 0
+	var total_items := 0
+	for id: String in GameData.ITEMS:
+		total_items += GameState.item_count(id)
+	_backpack_button.text = "BAG  (%d)" % total_items
+	_backpack_button.disabled = _over or _busy
+	if _backpack_overlay.visible:
+		_refresh_backpack()
 
 	bite_button.disabled = _over or _busy
 
@@ -375,18 +521,20 @@ func _on_item_pressed(id: String) -> void:
 	_refresh_buttons()
 
 	var item: Dictionary = GameData.ITEMS[id]
+	var item_name := String(item["name"])
+	var item_blurb := String(item["blurb"])
 	match String(item["effect"]):
 		"anger":
 			GameState.add_anger(int(item["amount"]))
-			_say("You down a black coffee. The rage sharpens.")
+			_say("%s. %s." % [item_name, item_blurb])
 			_tint(player_sprite, Color(1.25, 0.95, 0.6), 0.5)
 		"hp":
 			GameState.add_patience(int(item["amount"]))
-			_say("Bubble tea. Small joy, big recovery.")
+			_say("%s. %s." % [item_name, item_blurb])
 			_tint(player_sprite, Color(0.6, 1.25, 0.7), 0.5)
 		"guard":
 			_guard_next = true
-			_say("Headphones on. Whatever they say next lands softer.")
+			_say("%s on. Whatever they say next lands softer." % item_name)
 			_tint(player_sprite, Color(0.62, 0.78, 1.25), 0.5)
 
 	var hop := create_tween()
@@ -484,7 +632,9 @@ func _win() -> void:
 	_refresh_buttons()
 	_collapse("enemy")
 	_flash(Color(1.0, 0.85, 0.3), 0.4, 0.6)
-	_say("%s has nothing left to say." % String(_enemy["name"]))
+	var reward := int(_enemy.get("coin_reward", 20))
+	GameState.add_coins(reward)
+	_say("%s has nothing left to say.\n+%d coins" % [String(_enemy["name"]), reward])
 	await get_tree().create_timer(1.8).timeout
 	GameState.advance_stage()
 	## Every win drops the player into the shop to spend the coins they just
@@ -508,10 +658,14 @@ func _lose() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and not _over:
-		GameState.save_game()
-		get_tree().change_scene_to_file(MAIN_MENU)
-		get_viewport().set_input_as_handled()
+	if not event.is_action_pressed("ui_cancel") or _over:
+		return
+	get_viewport().set_input_as_handled()
+	if _backpack_overlay.visible:
+		_close_backpack()
+		return
+	GameState.save_game()
+	get_tree().change_scene_to_file(MAIN_MENU)
 
 
 # --------------------------------------------------------------------- fx ---

@@ -14,7 +14,11 @@ var stage_index := 0
 var patience := MAX_PATIENCE
 var anger := 0
 var rank := "Intern"
-var inventory := {"coffee": 2, "bubble_tea": 2, "headphones": 1}
+var inventory := {}
+var coins := 0
+## Word-attack uses per fight, carried over from the documents collected in
+## WorkPhase. Battle.gd reads this once in _ready() and floors it itself.
+var attack_quota := 0
 
 ## Movement actions are registered in code so the input map lives next to the
 ## gameplay that uses it instead of hand-edited into project.godot.
@@ -34,6 +38,19 @@ func _ready() -> void:
 			var event := InputEventKey.new()
 			event.physical_keycode = key
 			InputMap.action_add_event(action, event)
+	inventory = _default_inventory()
+
+
+## Every item id starts at 0 so the shop's bag panel always has a row to show;
+## the starter kit then tops up a few essentials.
+func _default_inventory() -> Dictionary:
+	var inv := {}
+	for id: String in GameData.ITEMS:
+		inv[id] = 0
+	inv["coffee"] = 1
+	inv["water"] = 1
+	inv["headphones"] = 1
+	return inv
 
 
 func start_new_run() -> void:
@@ -41,7 +58,9 @@ func start_new_run() -> void:
 	patience = MAX_PATIENCE
 	anger = 0
 	rank = "Intern"
-	inventory = {"coffee": 2, "bubble_tea": 2, "headphones": 1}
+	inventory = _default_inventory()
+	coins = 0
+	attack_quota = 0
 	save_game()
 	stats_changed.emit()
 
@@ -96,6 +115,26 @@ func grant_item(id: String, amount: int = 1) -> void:
 	stats_changed.emit()
 
 
+func add_coins(delta: int) -> void:
+	coins = maxi(0, coins + delta)
+	stats_changed.emit()
+
+
+func spend_coins(amount: int) -> bool:
+	if coins < amount:
+		return false
+	coins -= amount
+	stats_changed.emit()
+	return true
+
+
+## Called at the end of a WorkPhase run with the documents collected, so
+## Battle.gd knows how many uses to hand out per word this fight.
+func set_attack_quota(value: int) -> void:
+	attack_quota = maxi(0, value)
+	stats_changed.emit()
+
+
 ## Called after a win: promote, restock a little, and carry part of the anger.
 func advance_stage() -> void:
 	var enemy := current_enemy()
@@ -103,8 +142,9 @@ func advance_stage() -> void:
 	stage_index += 1
 	patience = MAX_PATIENCE
 	anger = int(anger * ANGER_CARRY)
+	attack_quota = 0
 	grant_item("coffee", 1)
-	grant_item("bubble_tea", 1)
+	grant_item("water", 1)
 	if stage_index % 2 == 1:
 		grant_item("headphones", 1)
 	save_game()
@@ -122,6 +162,8 @@ func save_game() -> void:
 		"anger": anger,
 		"rank": rank,
 		"inventory": inventory,
+		"coins": coins,
+		"attack_quota": attack_quota,
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:
@@ -147,13 +189,13 @@ func load_game() -> bool:
 	patience = clampi(int(data.get("patience", MAX_PATIENCE)), 1, MAX_PATIENCE)
 	anger = clampi(int(data.get("anger", 0)), 0, MAX_ANGER)
 	rank = String(data.get("rank", "Intern"))
+	coins = maxi(0, int(data.get("coins", 0)))
+	attack_quota = maxi(0, int(data.get("attack_quota", 0)))
 	var inv: Variant = data.get("inventory", {})
+	inventory = _default_inventory()
 	if typeof(inv) == TYPE_DICTIONARY:
-		inventory = {
-			"coffee": int((inv as Dictionary).get("coffee", 0)),
-			"bubble_tea": int((inv as Dictionary).get("bubble_tea", 0)),
-			"headphones": int((inv as Dictionary).get("headphones", 0)),
-		}
+		for id: String in GameData.ITEMS:
+			inventory[id] = int((inv as Dictionary).get(id, 0))
 	stats_changed.emit()
 	return true
 

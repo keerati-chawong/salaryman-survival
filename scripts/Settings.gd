@@ -41,6 +41,13 @@ var sfx_volume := 80.0
 var screen_shake := true
 var show_damage := true
 var tutorial_tips := true
+## Gates WorkPhase's "How to Play" briefing - shown once per run (while
+## tutorial_tips stays on), not once per shift. GameState.start_new_run()
+## resets this to false so every new game shows it again; it survives a
+## game over/Continue-from-checkpoint since those don't start a new run.
+## Persisted in Settings rather than GameState purely because that's where
+## the save/load plumbing for it already lives.
+var has_seen_workphase_intro := false
 var language_index := 0
 var difficulty := 1
 var ui_scale := 100.0
@@ -171,6 +178,7 @@ func reset_defaults() -> void:
 	screen_shake = true
 	show_damage = true
 	tutorial_tips = true
+	has_seen_workphase_intro = false
 	language_index = 0
 	difficulty = 1
 	ui_scale = 100.0
@@ -187,6 +195,7 @@ func save_settings() -> void:
 	cfg.set_value("gameplay", "screen_shake", screen_shake)
 	cfg.set_value("gameplay", "show_damage", show_damage)
 	cfg.set_value("gameplay", "tutorial_tips", tutorial_tips)
+	cfg.set_value("gameplay", "has_seen_workphase_intro", has_seen_workphase_intro)
 	cfg.set_value("gameplay", "difficulty", difficulty)
 	cfg.set_value("misc", "language", language_index)
 	cfg.set_value("misc", "ui_scale", ui_scale)
@@ -207,6 +216,7 @@ func load_settings() -> void:
 	screen_shake = cfg.get_value("gameplay", "screen_shake", screen_shake)
 	show_damage = cfg.get_value("gameplay", "show_damage", show_damage)
 	tutorial_tips = cfg.get_value("gameplay", "tutorial_tips", tutorial_tips)
+	has_seen_workphase_intro = cfg.get_value("gameplay", "has_seen_workphase_intro", has_seen_workphase_intro)
 	difficulty = cfg.get_value("gameplay", "difficulty", difficulty)
 	language_index = cfg.get_value("misc", "language", language_index)
 	ui_scale = cfg.get_value("misc", "ui_scale", ui_scale)

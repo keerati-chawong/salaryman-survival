@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://cwx3ij3gqlwr1" path="res://assets/characters/shadow.png" id="4_shadow"]
 [ext_resource type="Texture2D" uid="uid://bnkaks7nlpkxq" path="res://assets/item/coin.png" id="5_coin"]
 
-[sub_resource type="StyleBoxFlat" id="anger_fill"]
+[sub_resource type="StyleBoxFlat" id="energy_fill"]
 bg_color = Color(0.92, 0.6, 0.16, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
@@ -181,18 +181,18 @@ custom_minimum_size = Vector2(112, 0)
 layout_mode = 2
 theme_type_variation = &"StatLabel"
 theme_override_colors/font_color = Color(0.95, 0.66, 0.25, 1)
-text = "ANGER"
+text = "ENERGY"
 vertical_alignment = 1
 
-[node name="AngerBar" type="ProgressBar" parent="PlayerPanel/Cols/Bars/MPRow" unique_id=730784901]
+[node name="EnergyBar" type="ProgressBar" parent="PlayerPanel/Cols/Bars/MPRow" unique_id=730784901]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_styles/fill = SubResource("anger_fill")
+theme_override_styles/fill = SubResource("energy_fill")
 show_percentage = false
 
-[node name="AngerLabel" type="Label" parent="PlayerPanel/Cols/Bars/MPRow" unique_id=1827049622]
+[node name="EnergyLabel" type="Label" parent="PlayerPanel/Cols/Bars/MPRow" unique_id=1827049622]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme_type_variation = &"StatLabel"
@@ -254,7 +254,7 @@ columns = 2
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.82, 0.84, 0.88, 1)
-text = "Bite your tongue   (free, +15 Anger)"
+text = "Bite your tongue   (free, +15 Energy)"
 
 [node name="ItemRow" type="HBoxContainer" parent="ActionPanel/Rows" unique_id=1072655605]
 layout_mode = 2

@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://b8h1qgo3vw2xk"]
+
+[ext_resource type="Script" path="res://scripts/GameOver.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://v7dxhan5psk2" path="res://assets/backgrounds/menu_bg.png" id="2_bg"]
+
+[node name="GameOver" type="Control" unique_id=1338559700]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1823234300]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Dim" type="ColorRect" parent="." unique_id=907289900]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.05, 0.02, 0.03, 0.82)
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=253588900]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 220.0
+offset_right = 1236.0
+offset_bottom = 804.0
+
+[node name="Rows" type="VBoxContainer" parent="Panel" unique_id=1260380800]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Panel/Rows" unique_id=1007515300]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_colors/font_color = Color(0.93, 0.32, 0.32, 1)
+theme_override_font_sizes/font_size = 48
+text = "GAME OVER"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Panel/Rows" unique_id=1802251800]
+layout_mode = 2
+theme_type_variation = &"StatLabel"
+text = "You burned out."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Sep" type="HSeparator" parent="Panel/Rows" unique_id=579950900]
+layout_mode = 2
+
+[node name="Hint" type="Label" parent="Panel/Rows" unique_id=812392400]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.74, 0.77, 0.83, 1)
+text = "Continue picks up from your last cleared stage - checkpoints save automatically every time you win a fight."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Panel/Rows" unique_id=900677900]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="ContinueButton" type="Button" parent="Panel/Rows/Buttons" unique_id=951313400]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "Continue from Checkpoint"
+
+[node name="NewRunButton" type="Button" parent="Panel/Rows/Buttons" unique_id=1666724700]
+custom_minimum_size = Vector2(200, 52)
+layout_mode = 2
+text = "New Run"
+
+[node name="MenuButton" type="Button" parent="Panel/Rows/Buttons" unique_id=998970500]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+text = "Main Menu"

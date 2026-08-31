@@ -2,10 +2,23 @@
 
 [ext_resource type="Script" uid="uid://xl42o4aj5spn" path="res://scripts/WorkPhase.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://v7dxhan5psk2" path="res://assets/backgrounds/menu_bg.png" id="2_bg"]
-[ext_resource type="Texture2D" uid="uid://neuhavnah4j5" path="res://assets/characters/player.png" id="3_player"]
 
-[sub_resource type="StyleBoxFlat" id="anger_fill"]
+[sub_resource type="StyleBoxFlat" id="patience_fill"]
+bg_color = Color(0.78, 0.2, 0.24, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="energy_fill"]
 bg_color = Color(0.92, 0.6, 0.16, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="timer_fill"]
+bg_color = Color(0.55, 0.7, 0.95, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
@@ -39,26 +52,9 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-color = Color(0.04, 0.05, 0.08, 0.45)
+color = Color(0.04, 0.05, 0.08, 0.55)
 
-[node name="DocsLayer" type="Control" parent="." unique_id=752250982]
-anchors_preset = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-
-[node name="Player" type="TextureRect" parent="." unique_id=845909379]
-layout_mode = 0
-offset_left = 230.0
-offset_top = 470.0
-offset_right = 342.0
-offset_bottom = 686.0
-mouse_filter = 2
-texture = ExtResource("3_player")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="InsultLayer" type="Control" parent="." unique_id=22088576]
+[node name="DistractionLayer" type="Control" parent="." unique_id=752250982]
 anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -69,10 +65,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 1.0
-offset_top = -1.0
-offset_right = 1.0
-offset_bottom = -1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -84,7 +76,7 @@ offset_top = 34.0
 offset_right = 1488.0
 offset_bottom = 74.0
 theme_type_variation = &"HeaderLabel"
-text = "Shift 1"
+text = "Shift 1 - Testing: Polite"
 
 [node name="Hint" type="Label" parent="HUD" unique_id=1346548628]
 layout_mode = 0
@@ -94,7 +86,7 @@ offset_right = 1488.0
 offset_bottom = 112.0
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
-text = "WASD to move"
+text = "Type the word below. Press SPACE fast when a distraction pops up."
 
 [node name="Stats" type="VBoxContainer" parent="HUD" unique_id=614215040]
 layout_mode = 0
@@ -120,6 +112,7 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(360, 28)
 layout_mode = 2
 size_flags_vertical = 4
+theme_override_styles/fill = SubResource("patience_fill")
 max_value = 220.0
 value = 220.0
 show_percentage = false
@@ -132,26 +125,27 @@ text = "220 / 220"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="AngerRow" type="HBoxContainer" parent="HUD/Stats" unique_id=16269654]
+[node name="EnergyRow" type="HBoxContainer" parent="HUD/Stats" unique_id=16269654]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Tag" type="Label" parent="HUD/Stats/AngerRow" unique_id=1701597709]
+[node name="Tag" type="Label" parent="HUD/Stats/EnergyRow" unique_id=1701597709]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 theme_type_variation = &"StatLabel"
 theme_override_colors/font_color = Color(0.95, 0.66, 0.25, 1)
-text = "ANGER"
+text = "ENERGY"
 vertical_alignment = 1
 
-[node name="AngerBar" type="ProgressBar" parent="HUD/Stats/AngerRow" unique_id=1488721676]
+[node name="EnergyBar" type="ProgressBar" parent="HUD/Stats/EnergyRow" unique_id=1488721676]
 custom_minimum_size = Vector2(360, 28)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_styles/fill = SubResource("anger_fill")
+theme_override_styles/fill = SubResource("energy_fill")
+max_value = 100.0
 show_percentage = false
 
-[node name="AngerValue" type="Label" parent="HUD/Stats/AngerRow" unique_id=1034747031]
+[node name="EnergyValue" type="Label" parent="HUD/Stats/EnergyRow" unique_id=1034747031]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme_type_variation = &"StatLabel"
@@ -159,22 +153,33 @@ text = "0 / 100"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="QuotaRow" type="HBoxContainer" parent="HUD/Stats" unique_id=294883817]
+[node name="TimerRow" type="HBoxContainer" parent="HUD/Stats" unique_id=294883817]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Tag" type="Label" parent="HUD/Stats/QuotaRow" unique_id=78131074]
+[node name="Tag" type="Label" parent="HUD/Stats/TimerRow" unique_id=78131074]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 theme_type_variation = &"StatLabel"
 theme_override_colors/font_color = Color(0.85, 0.86, 0.9, 1)
-text = "DOCS"
+text = "TIME"
 vertical_alignment = 1
 
-[node name="QuotaValue" type="Label" parent="HUD/Stats/QuotaRow" unique_id=1058860309]
+[node name="TimerBar" type="ProgressBar" parent="HUD/Stats/TimerRow" unique_id=1058860310]
+custom_minimum_size = Vector2(360, 28)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("timer_fill")
+max_value = 40.0
+value = 40.0
+show_percentage = false
+
+[node name="TimerValue" type="Label" parent="HUD/Stats/TimerRow" unique_id=1058860309]
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme_type_variation = &"StatLabel"
-text = "0 / 6"
+text = "40s"
+horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="BackHint" type="Label" parent="HUD" unique_id=1923400413]
@@ -188,13 +193,47 @@ theme_override_colors/font_color = Color(0.7, 0.73, 0.78, 1)
 text = "Esc - back to menu"
 horizontal_alignment = 2
 
+[node name="TypingPanel" type="PanelContainer" parent="." unique_id=1290654800]
+layout_mode = 0
+offset_left = 468.0
+offset_top = 420.0
+offset_right = 1068.0
+offset_bottom = 560.0
+
+[node name="Rows" type="VBoxContainer" parent="TypingPanel" unique_id=450158370]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="CategoryLabel" type="Label" parent="TypingPanel/Rows" unique_id=450158371]
+layout_mode = 2
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
+horizontal_alignment = 1
+text = "POLITE"
+
+[node name="WordLabel" type="RichTextLabel" parent="TypingPanel/Rows" unique_id=450158372]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+horizontal_alignment = 1
+theme_override_font_sizes/normal_font_size = 40
+
+[node name="ComboLabel" type="Label" parent="TypingPanel/Rows" unique_id=450158373]
+layout_mode = 2
+theme_type_variation = &"SmallLabel"
+theme_override_colors/font_color = Color(0.6, 0.85, 0.6, 1)
+horizontal_alignment = 1
+text = "Words typed: 0"
+
 [node name="QtePanel" type="PanelContainer" parent="." unique_id=1290654854]
 visible = false
 layout_mode = 0
 offset_left = 588.0
-offset_top = 300.0
+offset_top = 220.0
 offset_right = 948.0
-offset_bottom = 470.0
+offset_bottom = 390.0
 
 [node name="Rows" type="VBoxContainer" parent="QtePanel" unique_id=450158374]
 layout_mode = 2
@@ -204,23 +243,70 @@ theme_override_constants/separation = 10
 layout_mode = 2
 theme_type_variation = &"StatLabel"
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
-text = "URGENT TASK!"
+text = "SOMEONE'S YELLING - PRESS SPACE!"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="KeyLabel" type="Label" parent="QtePanel/Rows" unique_id=283424716]
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
-theme_override_font_sizes/font_size = 56
-text = "Q"
+theme_override_font_sizes/font_size = 48
+text = "SPACE"
 horizontal_alignment = 1
 
 [node name="TimeBar" type="ProgressBar" parent="QtePanel/Rows" unique_id=297618037]
 custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 theme_override_styles/fill = SubResource("qte_fill")
-max_value = 2.2
-value = 2.2
+max_value = 1.4
+value = 1.4
 show_percentage = false
+
+[node name="IntroOverlay" type="Control" parent="." unique_id=1290654900]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="IntroOverlay" unique_id=1290654901]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.05, 0.85)
+
+[node name="Panel" type="PanelContainer" parent="IntroOverlay" unique_id=1290654902]
+layout_mode = 0
+offset_left = 368.0
+offset_top = 110.0
+offset_right = 1168.0
+offset_bottom = 914.0
+
+[node name="Rows" type="VBoxContainer" parent="IntroOverlay/Panel" unique_id=1290654903]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="IntroOverlay/Panel/Rows" unique_id=1290654904]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_colors/font_color = Color(1, 0.85, 0.38, 1)
+text = "HOW TO PLAY - WORK PHASE"
+horizontal_alignment = 1
+
+[node name="Body" type="Label" parent="IntroOverlay/Panel/Rows" unique_id=1290654905]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"StatLabel"
+theme_override_colors/font_color = Color(0.86, 0.88, 0.92, 1)
+autowrap_mode = 3
+text = "Loading..."
+
+[node name="StartButton" type="Button" parent="IntroOverlay/Panel/Rows" unique_id=1290654906]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Start Shift"
 
 [node name="Flash" type="ColorRect" parent="." unique_id=228233471]
 layout_mode = 1

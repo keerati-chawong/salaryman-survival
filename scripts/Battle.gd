@@ -5,15 +5,31 @@ extends Control
 const MAIN_MENU := "res://scenes/MainMenu.tscn"
 const PROMOTION := "res://scenes/Promotion.tscn"
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
+const GAME_OVER := "res://scenes/GameOver.tscn"
 
-## Anger regained whenever the enemy lands a hit, per the design's
-## "anger builds when you are insulted" rule.
-const ANGER_ON_HIT := 12
+## Energy regained whenever the enemy lands a hit, per the design's
+## "energy builds when you are insulted" rule.
+const ENERGY_ON_HIT := 12
 
-## Floor for word uses this fight, applied even if WorkPhase handed over
-## fewer documents than this (or nothing at all, e.g. an old save).
-const BASE_WORD_USES := 2
+## Floor for word uses this fight, applied even if WorkPhase's typing quota
+## handed over fewer than this (or nothing at all, e.g. an old save). Scaled
+## by how effective that word is against THIS enemy (see _base_uses_for()):
+## a word this enemy resists barely gets any free uses since spamming it is
+## already a bad idea, while a word that's a weakness gets a generous floor
+## so it can actually carry the fight even off a weak typing run.
+const BASE_USES_BY_EFFECTIVENESS := {
+	"immune": 1,
+	"resisted": 2,
+	"neutral": 2,
+	"weakness": 3,
+	"critical": 4,
+}
+## Hard ceiling on a word's uses this fight regardless of how high WorkPhase's
+## typing quota pushes it - a very good typing run shouldn't be able to make
+## a word effectively unlimited.
+const WORD_USES_CAP := 15
 const APOLOGIZE_COST := 30
+const APOLOGIZE_BONUS_USES := 2
 
 @onready var enemy_sprite: TextureRect = $Enemy
 @onready var enemy_shadow: TextureRect = $EnemyShadow
@@ -27,8 +43,8 @@ const APOLOGIZE_COST := 30
 
 @onready var patience_bar: ProgressBar = $PlayerPanel/Cols/Bars/HPRow/PatienceBar
 @onready var patience_label: Label = $PlayerPanel/Cols/Bars/HPRow/PatienceLabel
-@onready var anger_bar: ProgressBar = $PlayerPanel/Cols/Bars/MPRow/AngerBar
-@onready var anger_label: Label = $PlayerPanel/Cols/Bars/MPRow/AngerLabel
+@onready var energy_bar: ProgressBar = $PlayerPanel/Cols/Bars/MPRow/EnergyBar
+@onready var energy_label: Label = $PlayerPanel/Cols/Bars/MPRow/EnergyLabel
 @onready var rank_label: Label = $PlayerPanel/Cols/Bars/BottomRow/RankLabel
 @onready var coin_label: Label = $PlayerPanel/Cols/Bars/BottomRow/CoinLabel
 
@@ -37,7 +53,7 @@ const APOLOGIZE_COST := 30
 @onready var bite_button: Button = $ActionPanel/Rows/BiteButton
 @onready var hint_label: Label = $ActionPanel/Rows/HintLabel
 
-const BITE_ANGER := 15
+const BITE_ENERGY := 15
 @onready var message_label: Label = $MessagePanel/MessageLabel
 @onready var popup_label: Label = $DamagePopup
 @onready var flash_overlay: ColorRect = $FlashOverlay
@@ -49,7 +65,9 @@ var _enemy_max := 0
 
 var _busy := false
 var _over := false
-var _guard_next := false
+## Headphones halve the next hit for this many of the enemy's turns (only
+## ticks down on a turn that actually lands damage - see _consume_guard()).
+var _guard_turns_left := 0
 var _silenced := ""
 var _interrupted := false
 var _enemy_guarding := false
@@ -92,7 +110,7 @@ func _ready() -> void:
 	_build_backpack_button()
 	_build_backpack_overlay()
 	_build_apologize_button()
-	bite_button.mouse_entered.connect(_show_hint.bind("A free way to keep going when you're out of Anger and items."))
+	bite_button.mouse_entered.connect(_show_hint.bind("A free way to keep going when you're out of Energy and items."))
 	bite_button.mouse_exited.connect(_clear_hint)
 	_setup_sprites()
 	_refresh(true)
@@ -100,15 +118,40 @@ func _ready() -> void:
 	_say("%s\n%s" % [String(_enemy["intro"]), "Pick your words carefully."])
 
 
-## Every word starts this fight with the same number of uses: whatever
-## quota WorkPhase handed over (GameState.attack_quota), floored at
-## BASE_WORD_USES so an empty/old save can't hard-lock a fight.
+## Only words unlocked so far (GameState.unlocked_words - "Polite" from the
+## start, the rest unlocked one per stage by WorkPhase's typing test) are
+## usable at all. Each unlocked word's uses this fight come from how many of
+## that category were typed correctly in WorkPhase (GameState.word_quota),
+## floored at a per-enemy amount based on that word's effectiveness this
+## fight (see _base_uses_for()) so an empty/old save can't hard-lock a fight,
+## and capped at WORD_USES_CAP so a very strong typing run can't make a word
+## effectively unlimited.
 func _init_word_uses() -> void:
-	var uses := maxi(GameState.attack_quota, BASE_WORD_USES)
+	var mult_table: Dictionary = _enemy.get("mult", {})
 	for word: Dictionary in GameData.WORDS:
 		var id := String(word["id"])
+		if not GameState.is_word_unlocked(id):
+			continue
+		var mult := float(mult_table.get(id, 1.0))
+		var base := _base_uses_for(mult)
+		var uses := mini(maxi(int(GameState.word_quota.get(id, 0)), base), WORD_USES_CAP)
 		_word_uses[id] = uses
 		_word_max_uses[id] = uses
+
+
+## Mirrors GameData.effectiveness_label()'s thresholds so the floor tracks
+## the same "immune/resisted/neutral/weakness/critical" bands shown in the
+## damage popup and Promotion's reaction chart.
+func _base_uses_for(mult: float) -> int:
+	if is_equal_approx(mult, GameData.IMMUNE):
+		return int(BASE_USES_BY_EFFECTIVENESS["immune"])
+	if mult >= GameData.CRITICAL_AT:
+		return int(BASE_USES_BY_EFFECTIVENESS["critical"])
+	if mult > 1.0:
+		return int(BASE_USES_BY_EFFECTIVENESS["weakness"])
+	if mult < 1.0:
+		return int(BASE_USES_BY_EFFECTIVENESS["resisted"])
+	return int(BASE_USES_BY_EFFECTIVENESS["neutral"])
 
 
 func _setup_enemy_visuals() -> void:
@@ -130,7 +173,7 @@ func _setup_bars() -> void:
 
 	enemy_bar.max_value = _enemy_max
 	patience_bar.max_value = GameState.MAX_PATIENCE
-	anger_bar.max_value = GameState.MAX_ANGER
+	energy_bar.max_value = GameState.MAX_ENERGY
 
 
 func _setup_sprites() -> void:
@@ -144,20 +187,25 @@ func _setup_sprites() -> void:
 
 # ------------------------------------------------------------ ui building ---
 
+## Locked words (GameState.unlocked_words) don't get a button at all - there's
+## nothing useful to show for a skill you haven't earned yet.
 func _build_word_buttons() -> void:
 	for word: Dictionary in GameData.WORDS:
+		var id := String(word["id"])
+		if not GameState.is_word_unlocked(id):
+			continue
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(0, 74)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		btn.text = "%s\n%d Anger" % [String(word["short"]), int(word["cost"])]
+		btn.text = "%s\n%d Energy" % [String(word["short"]), int(word["cost"])]
 		btn.add_theme_color_override("font_color", word["color"])
-		btn.pressed.connect(_on_word_pressed.bind(String(word["id"])))
+		btn.pressed.connect(_on_word_pressed.bind(id))
 		# a shared hint line avoids tooltips popping over neighbouring buttons
 		btn.mouse_entered.connect(_show_hint.bind("%s - %s" % [String(word["name"]), String(word["blurb"])]))
 		btn.mouse_exited.connect(_clear_hint)
 		word_grid.add_child(btn)
-		_word_buttons[String(word["id"])] = btn
+		_word_buttons[id] = btn
 
 
 ## Nine items is too many to lay out inline in ItemRow, so it holds a single
@@ -306,7 +354,7 @@ func _refresh_backpack() -> void:
 ## Patience to keep the fight going instead of being locked out entirely.
 func _build_apologize_button() -> void:
 	_apologize_button = Button.new()
-	_apologize_button.text = "Apologize  (-%d Patience, +1 use each)" % APOLOGIZE_COST
+	_apologize_button.text = "Apologize  (-%d Energy, +%d uses each)" % [APOLOGIZE_COST, APOLOGIZE_BONUS_USES]
 	_apologize_button.custom_minimum_size = bite_button.custom_minimum_size
 	_apologize_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apologize_button.visible = false
@@ -332,10 +380,10 @@ func _refresh_buttons() -> void:
 		var uses := int(_word_uses.get(id, 0))
 		if uses > 0:
 			out_of_words = false
-		var blocked := _over or _busy or _silenced == id or uses <= 0 or GameState.anger < int(word["cost"])
+		var blocked := _over or _busy or _silenced == id or uses <= 0 or GameState.energy < int(word["cost"])
 		btn.disabled = blocked
 		var suffix := "  (silenced)" if _silenced == id else ""
-		btn.text = "%s%s  (%d/%d)\n%d Anger" % [
+		btn.text = "%s%s  (%d/%d)\n%d Energy" % [
 			String(word["short"]), suffix, uses, int(_word_max_uses.get(id, uses)), int(word["cost"]),
 		]
 
@@ -350,7 +398,7 @@ func _refresh_buttons() -> void:
 	bite_button.disabled = _over or _busy
 
 	_apologize_button.visible = out_of_words
-	_apologize_button.disabled = _over or _busy or GameState.patience <= APOLOGIZE_COST
+	_apologize_button.disabled = _over or _busy or GameState.energy < APOLOGIZE_COST
 
 
 # ------------------------------------------------------------------ state ---
@@ -358,20 +406,20 @@ func _refresh_buttons() -> void:
 func _refresh(instant := false) -> void:
 	enemy_hp_label.text = "%d / %d" % [maxi(_enemy_hp, 0), _enemy_max]
 	patience_label.text = "%d / %d" % [maxi(GameState.patience, 0), GameState.MAX_PATIENCE]
-	anger_label.text = "%d / %d" % [GameState.anger, GameState.MAX_ANGER]
+	energy_label.text = "%d / %d" % [GameState.energy, GameState.MAX_ENERGY]
 	rank_label.text = "Rank: %s" % GameState.rank
 	coin_label.text = "%d coins" % GameState.coins
 
 	if instant:
 		enemy_bar.value = _enemy_hp
 		patience_bar.value = GameState.patience
-		anger_bar.value = GameState.anger
+		energy_bar.value = GameState.energy
 	else:
 		var t := create_tween()
 		t.set_parallel(true)
 		t.tween_property(enemy_bar, "value", maxf(_enemy_hp, 0), 0.3)
 		t.tween_property(patience_bar, "value", maxf(GameState.patience, 0), 0.3)
-		t.tween_property(anger_bar, "value", GameState.anger, 0.3)
+		t.tween_property(energy_bar, "value", GameState.energy, 0.3)
 
 	_recolour(_hp_fill, float(GameState.patience) / GameState.MAX_PATIENCE)
 	_recolour(_enemy_fill, float(_enemy_hp) / _enemy_max)
@@ -400,8 +448,8 @@ func _on_word_pressed(id: String) -> void:
 	if int(_word_uses.get(id, 0)) <= 0:
 		_say("You're out of ways to say that this fight.")
 		return
-	if not GameState.spend_anger(int(word["cost"])):
-		_say("Not enough Anger for that one.")
+	if not GameState.spend_energy(int(word["cost"])):
+		_say("Not enough Energy for that one.")
 		return
 
 	_busy = true
@@ -463,36 +511,43 @@ func _on_bite_pressed() -> void:
 	_busy = true
 	_refresh_buttons()
 
-	GameState.add_anger(BITE_ANGER)
-	_say("You bite your tongue and swallow it. The anger stays in the tank.")
+	GameState.add_energy(BITE_ENERGY)
+	_say("You bite your tongue and swallow it. The energy stays in the tank.")
 	_tint(player_sprite, Color(0.85, 0.85, 0.85), 0.4)
-	_popup("+%d Anger" % BITE_ANGER, false, Color(0.95, 0.66, 0.25))
+	_popup("+%d Energy" % BITE_ENERGY, false, Color(0.95, 0.66, 0.25))
 
 	_refresh()
 	await get_tree().create_timer(0.5).timeout
 	await _enemy_turn()
 
 
-## Crisis fallback once every word is out of uses: burn Patience to keep
-## the fight going rather than being stuck with only Bite/items.
+## Crisis fallback once every word is out of uses: burn Energy to keep the
+## fight going rather than being stuck with only Bite/items. Guarded by
+## spend_energy() rather than a flat subtract since - unlike the old Patience
+## cost - going below the amount actually blocks the action instead of just
+## clamping toward a loss.
+##
+## This refills uses back toward each word's existing max (set once in
+## _init_word_uses()) - it does NOT raise the max itself. Bumping both
+## together let repeated Apologizing inflate a word's ceiling indefinitely
+## (e.g. 0/2 -> 2/4 -> 4/6...), which defeated the point of WORD_USES_CAP.
 func _on_apologize_pressed() -> void:
 	if _busy or _over:
+		return
+	if not GameState.spend_energy(APOLOGIZE_COST):
 		return
 
 	_busy = true
 	_refresh_buttons()
 
-	GameState.add_patience(-APOLOGIZE_COST)
 	for id: String in _word_uses:
-		_word_uses[id] = int(_word_uses[id]) + 1
-	_say("You apologise for existing. It buys you one more line on everything.")
+		var cap := int(_word_max_uses.get(id, 0))
+		_word_uses[id] = mini(int(_word_uses[id]) + APOLOGIZE_BONUS_USES, cap)
+	_say("You apologise for existing. It buys you a couple more lines on everything.")
 	_tint(player_sprite, Color(0.8, 0.8, 0.85), 0.4)
-	_popup("-%d Patience, +1 use each" % APOLOGIZE_COST, false, Color(0.85, 0.6, 0.6))
+	_popup("-%d Energy, +%d uses each" % [APOLOGIZE_COST, APOLOGIZE_BONUS_USES], false, Color(0.85, 0.6, 0.6))
 
 	_refresh()
-	if GameState.patience <= 0:
-		await _lose()
-		return
 	await get_tree().create_timer(0.5).timeout
 	await _enemy_turn()
 
@@ -510,8 +565,8 @@ func _on_item_pressed(id: String) -> void:
 	var name := String(item["name"])
 	var blurb := String(item["blurb"])
 	match String(item["effect"]):
-		"anger":
-			GameState.add_anger(int(item["amount"]))
+		"energy":
+			GameState.add_energy(int(item["amount"]))
 			_say("%s. %s." % [name, blurb])
 			_tint(player_sprite, Color(1.25, 0.95, 0.6), 0.5)
 		"hp":
@@ -519,8 +574,8 @@ func _on_item_pressed(id: String) -> void:
 			_say("%s. %s." % [name, blurb])
 			_tint(player_sprite, Color(0.6, 1.25, 0.7), 0.5)
 		"guard":
-			_guard_next = true
-			_say("%s on. Whatever they say next lands softer." % name)
+			_guard_turns_left = 2
+			_say("%s on. Whatever they say for the next two turns lands softer." % name)
 			_tint(player_sprite, Color(0.62, 0.78, 1.25), 0.5)
 
 	var hop := create_tween()
@@ -549,9 +604,7 @@ func _enemy_turn() -> void:
 			var dmg_range: Array = _enemy["damage"]
 			var dmg := randi_range(int(dmg_range[0]), int(dmg_range[1]))
 			dmg = int(dmg * [0.75, 1.0, 1.3][clampi(Settings.difficulty, 0, 2)])
-			if _guard_next:
-				dmg = int(dmg * 0.5)
-				_guard_next = false
+			dmg = int(dmg * _consume_guard())
 
 			var taunts: Array = _enemy["taunts"]
 			_say('"%s"' % String(taunts[randi() % taunts.size()]))
@@ -560,7 +613,7 @@ func _enemy_turn() -> void:
 			await get_tree().create_timer(0.22).timeout
 
 			GameState.add_patience(-dmg)
-			GameState.add_anger(ANGER_ON_HIT)
+			GameState.add_energy(ENERGY_ON_HIT)
 			_popup("-%d" % dmg, false, Color(1.0, 0.5, 0.45))
 			_recoil("player", -40.0)
 			_flash(Color(0.9, 0.2, 0.2), 0.3, 0.3)
@@ -584,6 +637,17 @@ func _roll_guard_stance() -> bool:
 	return chance > 0.0 and not _enemy_guarding and randf() < chance
 
 
+## Headphones halve whatever damage actually lands this turn, for the next
+## two turns that land damage - a turn that doesn't hit at all (an enemy
+## guard stance, or a non-damaging skill like Interrupt/Silence) doesn't
+## burn one of those two turns.
+func _consume_guard() -> float:
+	if _guard_turns_left <= 0:
+		return 1.0
+	_guard_turns_left -= 1
+	return 0.5
+
+
 func _enter_guard_stance() -> void:
 	_enemy_guarding = true
 	_say("%s squares up and stops listening. (Guarding - your next line will be fully blocked.)" % String(_enemy["name"]))
@@ -605,9 +669,9 @@ func _try_skill() -> bool:
 
 	match skill:
 		"pile_on":
-			var chip := 10
+			var chip := int(10 * _consume_guard())
 			GameState.add_patience(-chip)
-			GameState.add_anger(ANGER_ON_HIT)
+			GameState.add_energy(ENERGY_ON_HIT)
 			_say("Pile On - another 'small favour' lands on your desk.")
 			_popup("-%d" % chip, false, Color(1.0, 0.6, 0.4))
 		"interrupt":
@@ -617,28 +681,32 @@ func _try_skill() -> bool:
 		"silence":
 			var pool: Array = []
 			for w: Dictionary in GameData.WORDS:
-				pool.append(String(w["id"]))
-			_silenced = String(pool[randi() % pool.size()])
-			_say("Policy Citation - %s is off limits this turn." % GameData.word_by_id(_silenced)["name"])
-			_popup("Silenced", false, Color(0.8, 0.8, 0.9))
+				if GameState.is_word_unlocked(String(w["id"])):
+					pool.append(String(w["id"]))
+			if not pool.is_empty():
+				_silenced = String(pool[randi() % pool.size()])
+				_say("Policy Citation - %s is off limits this turn." % GameData.word_by_id(_silenced)["name"])
+				_popup("Silenced", false, Color(0.8, 0.8, 0.9))
 		"gaslight":
 			var drain := 18
-			GameState.add_anger(-drain)
-			_say("Gaslighting - \"I never said that.\" Your anger wavers.")
-			_popup("-%d Anger" % drain, false, Color(0.85, 0.7, 1.0))
+			GameState.add_energy(-drain)
+			_say("Gaslighting - \"I never said that.\" Your energy wavers.")
+			_popup("-%d Energy" % drain, false, Color(0.85, 0.7, 1.0))
 		"after_hours_ping":
-			var chip := 12
+			var chip := int(12 * _consume_guard())
 			GameState.add_patience(-chip)
-			GameState.add_anger(-8)
+			GameState.add_energy(-8)
 			_say("After-Hours Ping - \"Sorry to bug you at 9pm, quick one!\"")
-			_popup("-%d, -8 Anger" % chip, false, Color(1.0, 0.55, 0.35))
+			_popup("-%d, -8 Energy" % chip, false, Color(1.0, 0.55, 0.35))
 		"urgent_no_brief":
 			var pool: Array = []
 			for w: Dictionary in GameData.WORDS:
-				pool.append(String(w["id"]))
-			_silenced = String(pool[randi() % pool.size()])
-			_say("Urgent, No Brief - \"Need this redone, can't explain why, just vibes.\"")
-			_popup("Silenced", false, Color(0.8, 0.8, 0.9))
+				if GameState.is_word_unlocked(String(w["id"])):
+					pool.append(String(w["id"]))
+			if not pool.is_empty():
+				_silenced = String(pool[randi() % pool.size()])
+				_say("Urgent, No Brief - \"Need this redone, can't explain why, just vibes.\"")
+				_popup("Silenced", false, Color(0.8, 0.8, 0.9))
 
 	_flash(Color(0.6, 0.4, 0.9), 0.28, 0.35)
 	_refresh()
@@ -668,9 +736,10 @@ func _lose() -> void:
 	_collapse("player")
 	_flash(Color(0.1, 0.1, 0.1), 0.6, 1.2)
 	_say("Your patience is gone. You apologise and go back to your desk.")
-	GameState.delete_save()
+	## No delete_save() here - the last stage-win checkpoint stays on disk so
+	## GameOver's "Continue from Checkpoint" has something to load.
 	await get_tree().create_timer(2.1).timeout
-	get_tree().change_scene_to_file(MAIN_MENU)
+	get_tree().change_scene_to_file(GAME_OVER)
 
 
 func _unhandled_input(event: InputEvent) -> void:

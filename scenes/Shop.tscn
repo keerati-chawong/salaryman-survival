@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://60yentwa2b5j"]
+
+[ext_resource type="Texture2D" uid="uid://b787icvpdjca3" path="res://assets/backgrounds/shop.png" id="1_lx5au"]
+[ext_resource type="Script" uid="uid://3p2hpuw4e2rl" path="res://scripts/Shop.gd" id="2_script"]
+
+[node name="Shop" type="Control" unique_id=180898339]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_script")
+
+[node name="shop_bg" type="TextureRect" parent="." unique_id=1703980703]
+layout_mode = 0
+offset_right = 1536.0
+offset_bottom = 1023.0
+texture = ExtResource("1_lx5au")
+expand_mode = 1

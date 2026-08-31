@@ -1,84 +1,105 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://yfxuxti15uiy"]
 
-[ext_resource type="Script" path="res://scripts/Promotion.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/menu_bg.png" id="2_bg"]
+[ext_resource type="Script" uid="uid://b0s5fhrtha7m2" path="res://scripts/Promotion.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://v7dxhan5psk2" path="res://assets/backgrounds/menu_bg.png" id="2_bg"]
 
-[node name="Promotion" type="Control"]
+[node name="Promotion" type="Control" unique_id=1338559632]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_script")
 
-[node name="Background" type="TextureRect" parent="."]
-mouse_filter = 2
+[node name="Background" type="TextureRect" parent="." unique_id=1823234204]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
 texture = ExtResource("2_bg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="Dim" type="ColorRect" parent="."]
-mouse_filter = 2
+[node name="Dim" type="ColorRect" parent="." unique_id=907289870]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
 color = Color(0.03, 0.04, 0.06, 0.78)
 
-[node name="Panel" type="PanelContainer" parent="."]
+[node name="Panel" type="PanelContainer" parent="." unique_id=253588868]
+layout_mode = 0
 offset_left = 300.0
 offset_top = 168.0
 offset_right = 1236.0
 offset_bottom = 856.0
 
-[node name="Rows" type="VBoxContainer" parent="Panel"]
+[node name="Rows" type="VBoxContainer" parent="Panel" unique_id=1260380734]
+layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Title" type="Label" parent="Panel/Rows"]
+[node name="Title" type="Label" parent="Panel/Rows" unique_id=1007515282]
+layout_mode = 2
 theme_type_variation = &"HeaderLabel"
-theme_override_font_sizes/font_size = 44
 theme_override_colors/font_color = Color(1, 0.85, 0.38, 1)
-horizontal_alignment = 1
+theme_override_font_sizes/font_size = 44
 text = "PROMOTED"
-
-[node name="Subtitle" type="Label" parent="Panel/Rows"]
-theme_type_variation = &"StatLabel"
-autowrap_mode = 3
 horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Panel/Rows" unique_id=1802251747]
+layout_mode = 2
+theme_type_variation = &"StatLabel"
 text = "You are now Junior Staff."
+horizontal_alignment = 1
+autowrap_mode = 3
 
-[node name="Sep" type="HSeparator" parent="Panel/Rows"]
+[node name="Sep" type="HSeparator" parent="Panel/Rows" unique_id=579950891]
+layout_mode = 2
 
-[node name="NextBox" type="VBoxContainer" parent="Panel/Rows"]
+[node name="NextBox" type="VBoxContainer" parent="Panel/Rows" unique_id=499539768]
+layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="NextTitle" type="Label" parent="Panel/Rows/NextBox"]
+[node name="NextTitle" type="Label" parent="Panel/Rows/NextBox" unique_id=108726758]
+layout_mode = 2
 theme_type_variation = &"BigStatLabel"
 text = "Next opponent"
 
-[node name="NextIntro" type="Label" parent="Panel/Rows/NextBox"]
+[node name="NextIntro" type="Label" parent="Panel/Rows/NextBox" unique_id=813185849]
+layout_mode = 2
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.74, 0.77, 0.83, 1)
 autowrap_mode = 3
-text = ""
 
-[node name="ChartTitle" type="Label" parent="Panel/Rows/NextBox"]
+[node name="ChartTitle" type="Label" parent="Panel/Rows/NextBox" unique_id=1479952840]
+layout_mode = 2
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.62, 0.66, 0.72, 1)
 text = "Known reactions"
 
-[node name="Chart" type="GridContainer" parent="Panel/Rows/NextBox"]
+[node name="Chart" type="GridContainer" parent="Panel/Rows/NextBox" unique_id=933940061]
+layout_mode = 2
 theme_override_constants/h_separation = 24
 theme_override_constants/v_separation = 10
 columns = 2
 
-[node name="Spacer" type="Control" parent="Panel/Rows"]
+[node name="Spacer" type="Control" parent="Panel/Rows" unique_id=912392416]
+layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Buttons" type="HBoxContainer" parent="Panel/Rows"]
+[node name="Buttons" type="HBoxContainer" parent="Panel/Rows" unique_id=900677977]
+layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 2
 
-[node name="MenuButton" type="Button" parent="Panel/Rows/Buttons"]
+[node name="MenuButton" type="Button" parent="Panel/Rows/Buttons" unique_id=998970483]
+layout_mode = 2
 text = "Main Menu"
 
-[node name="ContinueButton" type="Button" parent="Panel/Rows/Buttons"]
+[node name="Go_to_shop" type="Button" parent="Panel/Rows/Buttons" unique_id=1666724678]
+layout_mode = 2
+text = "Go to shop"
+
+[node name="ContinueButton" type="Button" parent="Panel/Rows/Buttons" unique_id=951313357]
+layout_mode = 2
 text = "Start next shift"

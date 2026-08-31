@@ -77,6 +77,7 @@ const ENEMIES: Array = [
 		"name": "The Rookie",
 		"role": "Intern",
 		"hp": 240,
+		"coin_reward": 15,
 		"sprite": "res://assets/characters/enemies/rookie.png",
 		"scale": 0.86,
 		"damage": [12, 20],
@@ -96,6 +97,7 @@ const ENEMIES: Array = [
 		"name": "The Work-Dodger",
 		"role": "Colleague",
 		"hp": 320,
+		"coin_reward": 20,
 		"sprite": "res://assets/characters/enemies/dodger.png",
 		"scale": 0.94,
 		"damage": [14, 22],
@@ -112,21 +114,26 @@ const ENEMIES: Array = [
 	},
 	{
 		"id": "senior",
-		"name": "Micro-Manager Senior",
-		"role": "Team Lead",
+		"name": "The Team Lead",
+		"role": "Micromanager",
 		"hp": 420,
+		"coin_reward": 30,
 		"sprite": "res://assets/characters/enemies/senior.png",
 		"scale": 1.0,
 		"damage": [18, 28],
-		"skill": "interrupt",
-		"skill_name": "Cut You Off",
+		"skills": ["after_hours_ping", "urgent_no_brief"],
+		"skill_name": "After-Hours Ping / Urgent, No Brief",
+		## Chance per enemy turn to raise a shield instead of attacking or
+		## using a skill; see Battle.gd's _roll_guard_stance()/_enemy_guarding.
+		"guard_chance": 0.25,
 		"mult": {"jargon": 1.8, "direct": 1.0, "passive": 1.1, "logic": 0.5},
-		"intro": "Reviews your commas. Never reviews the roadmap.",
+		"intro": "Branded coffee cup in one hand, a KPI folder in the other, phone already buzzing.",
 		"taunts": [
-			"Let me stop you right there.",
-			"Reword that, but keep it the same.",
-			"Send me a status update on the status update.",
+			"Just checking in on the check-in.",
+			"Can we get eyes on this by EOD? Today's EOD.",
+			"I left three comments on a doc you haven't opened yet.",
 		],
+		"defeat": "...I'll note this in your review. Actually - forget I said that.",
 		"promotion": "Team Lead",
 	},
 	{
@@ -134,6 +141,7 @@ const ENEMIES: Array = [
 		"name": "HR Compliance",
 		"role": "Human Resources",
 		"hp": 500,
+		"coin_reward": 35,
 		"sprite": "res://assets/characters/enemies/hr.png",
 		"scale": 1.02,
 		"damage": [20, 30],
@@ -153,6 +161,7 @@ const ENEMIES: Array = [
 		"name": "The CEO",
 		"role": "Final Boss",
 		"hp": 700,
+		"coin_reward": 60,
 		"sprite": "res://assets/characters/enemies/ceo.png",
 		"scale": 1.12,
 		"damage": [26, 38],
@@ -169,24 +178,82 @@ const ENEMIES: Array = [
 	},
 ]
 
+## The eight food/drink ids double as the vending machine's stock in Shop.gd -
+## each one is also a slot painted into assets/backgrounds/shop.png, so its id
+## must stay in step with Shop.gd's FOOD_SLOTS keys. "headphones" isn't part of
+## the machine art and gets its own row in the shop's Accessories panel.
 const ITEMS: Dictionary = {
 	"coffee": {
 		"name": "Black Coffee",
 		"blurb": "+45 Anger",
 		"effect": "anger",
 		"amount": 45,
+		"price": 15,
+		"icon": "res://assets/item/icon_coffee.png",
 	},
-	"bubble_tea": {
-		"name": "Bubble Tea",
-		"blurb": "+70 Patience",
+	"energy_bar": {
+		"name": "Energy Bar",
+		"blurb": "+30 Anger",
+		"effect": "anger",
+		"amount": 30,
+		"price": 12,
+		"icon": "res://assets/item/icon_energy_bar.png",
+	},
+	"soda": {
+		"name": "Cola",
+		"blurb": "+50 Anger",
+		"effect": "anger",
+		"amount": 50,
+		"price": 22,
+		"icon": "res://assets/item/icon_soda.png",
+	},
+	"banana": {
+		"name": "Banana",
+		"blurb": "+20 Anger",
+		"effect": "anger",
+		"amount": 20,
+		"price": 8,
+		"icon": "res://assets/item/icon_banana.png",
+	},
+	"apple": {
+		"name": "Apple",
+		"blurb": "+35 Patience",
 		"effect": "hp",
-		"amount": 70,
+		"amount": 35,
+		"price": 12,
+		"icon": "res://assets/item/icon_apple.png",
+	},
+	"water": {
+		"name": "Bottled Water",
+		"blurb": "+30 Patience",
+		"effect": "hp",
+		"amount": 30,
+		"price": 10,
+		"icon": "res://assets/item/icon_water.png",
+	},
+	"noodles": {
+		"name": "Instant Noodles",
+		"blurb": "+80 Patience",
+		"effect": "hp",
+		"amount": 80,
+		"price": 24,
+		"icon": "res://assets/item/icon_noodles.png",
+	},
+	"sandwich": {
+		"name": "Sandwich",
+		"blurb": "+65 Patience",
+		"effect": "hp",
+		"amount": 65,
+		"price": 20,
+		"icon": "res://assets/item/icon_sandwich.png",
 	},
 	"headphones": {
 		"name": "Noise-Cancelling Headphones",
 		"blurb": "Halve the next hit",
 		"effect": "guard",
 		"amount": 1,
+		"price": 35,
+		"icon": "res://assets/item/headphone.png",
 	},
 }
 

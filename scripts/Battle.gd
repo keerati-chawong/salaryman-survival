@@ -5,6 +5,7 @@ extends Control
 const MAIN_MENU := "res://scenes/MainMenu.tscn"
 const PROMOTION := "res://scenes/Promotion.tscn"
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
+const SHOP := "res://scenes/Shop.tscn"
 
 ## Anger regained whenever the enemy lands a hit, per the design's
 ## "anger builds when you are insulted" rule.
@@ -486,7 +487,13 @@ func _win() -> void:
 	_say("%s has nothing left to say." % String(_enemy["name"]))
 	await get_tree().create_timer(1.8).timeout
 	GameState.advance_stage()
-	get_tree().change_scene_to_file(PROMOTION)
+	## Every win drops the player into the shop to spend the coins they just
+	## earned; the shop's Back button carries on to Promotion. The final win
+	## has no shop - it goes straight to the ending recap.
+	if GameState.stage_index >= GameData.enemy_count():
+		get_tree().change_scene_to_file(PROMOTION)
+	else:
+		get_tree().change_scene_to_file(SHOP)
 
 
 func _lose() -> void:

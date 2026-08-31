@@ -17,19 +17,31 @@ const ANGER_ON_HIT := 12
 
 @onready var enemy_name: Label = $EnemyPanel/Rows/TitleRow/EnemyName
 @onready var enemy_role: Label = $EnemyPanel/Rows/TitleRow/EnemyRole
+@onready var enemy_health_percent: Label = $EnemyPanel/Rows/TitleRow/EnemyHealthPercent
 @onready var enemy_bar: ProgressBar = $EnemyPanel/Rows/BarRow/EnemyHPBar
 @onready var enemy_hp_label: Label = $EnemyPanel/Rows/BarRow/EnemyHPLabel
+@onready var enemy_bar_visual: ProgressBar = $EnemyHealthBarVisual
 
 @onready var patience_bar: ProgressBar = $PlayerPanel/Cols/Bars/HPRow/PatienceBar
 @onready var patience_label: Label = $PlayerPanel/Cols/Bars/HPRow/PatienceLabel
 @onready var anger_bar: ProgressBar = $PlayerPanel/Cols/Bars/MPRow/AngerBar
 @onready var anger_label: Label = $PlayerPanel/Cols/Bars/MPRow/AngerLabel
 @onready var rank_label: Label = $PlayerPanel/Cols/Bars/RankLabel
+@onready var patience_bar_visual: ProgressBar = $PatienceBarVisual
+@onready var anger_bar_visual: ProgressBar = $AngerBarVisual
+
+@onready var enemy_cells: Control = $EnemyCells
+@onready var patience_cells: Control = $PatienceCells
+@onready var anger_cells: Control = $AngerCells
+@onready var patience_title: Label = $PatienceTitle
+@onready var anger_title: Label = $AngerTitle
 
 @onready var word_grid: GridContainer = $ActionPanel/Rows/WordGrid
-@onready var item_row: HBoxContainer = $ActionPanel/Rows/ItemRow
-@onready var bite_button: Button = $ActionPanel/Rows/BiteButton
+@onready var item_row: HBoxContainer = $UtilityRow/ItemRow
+@onready var bite_button: Button = $UtilityRow/BiteButton
 @onready var hint_label: Label = $ActionPanel/Rows/HintLabel
+@onready var utility_hint: PanelContainer = $UtilityHint
+@onready var utility_hint_text: Label = $UtilityHint/Text
 
 const BITE_ANGER := 15
 @onready var message_label: Label = $MessagePanel/MessageLabel
@@ -62,6 +74,10 @@ var _enemy_down := false
 
 var _hp_fill := StyleBoxFlat.new()
 var _enemy_fill := StyleBoxFlat.new()
+var _anger_fill := StyleBoxFlat.new()
+var _enemy_cells: Array[TextureRect] = []
+var _patience_cells: Array[TextureRect] = []
+var _anger_cells: Array[TextureRect] = []
 
 
 func _ready() -> void:
@@ -74,8 +90,8 @@ func _ready() -> void:
 	_setup_bars()
 	_build_word_buttons()
 	_build_item_buttons()
-	bite_button.mouse_entered.connect(_show_hint.bind("A free way to keep going when you're out of Anger and items."))
-	bite_button.mouse_exited.connect(_clear_hint)
+	bite_button.mouse_entered.connect(_show_utility_hint.bind("Bite Tongue: gain 15 Anger. Free to use, but ends your turn."))
+	bite_button.mouse_exited.connect(_hide_utility_hint)
 	_setup_sprites()
 	_refresh(true)
 
@@ -94,14 +110,49 @@ func _setup_bars() -> void:
 	_enemy_fill.bg_color = Color(0.78, 0.2, 0.24)
 	_enemy_fill.set_corner_radius_all(2)
 	enemy_bar.add_theme_stylebox_override("fill", _enemy_fill)
+	enemy_bar_visual.add_theme_stylebox_override("fill", _enemy_fill)
 
 	_hp_fill.bg_color = Color(0.78, 0.2, 0.24)
 	_hp_fill.set_corner_radius_all(2)
 	patience_bar.add_theme_stylebox_override("fill", _hp_fill)
+	patience_bar_visual.add_theme_stylebox_override("fill", _hp_fill)
+
+	_anger_fill.bg_color = Color(0.28, 0.52, 0.62)
+	_anger_fill.set_corner_radius_all(2)
+	anger_bar_visual.add_theme_stylebox_override("fill", _anger_fill)
+	var transparent_bar := StyleBoxEmpty.new()
+	enemy_bar_visual.add_theme_stylebox_override("background", transparent_bar)
+	patience_bar_visual.add_theme_stylebox_override("background", transparent_bar)
+	anger_bar_visual.add_theme_stylebox_override("background", transparent_bar)
 
 	enemy_bar.max_value = _enemy_max
 	patience_bar.max_value = GameState.MAX_PATIENCE
 	anger_bar.max_value = GameState.MAX_ANGER
+	enemy_bar_visual.max_value = _enemy_max
+	patience_bar_visual.max_value = GameState.MAX_PATIENCE
+	anger_bar_visual.max_value = GameState.MAX_ANGER
+
+
+func _make_health_cells(holder: Control, texture_path: String, positions: Array[Vector2], cell_size: Vector2) -> Array[TextureRect]:
+	var cells: Array[TextureRect] = []
+	var fill_texture := load(texture_path) as Texture2D
+	for index: int in 4:
+		var cell := TextureRect.new()
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.texture = fill_texture
+		cell.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		cell.stretch_mode = TextureRect.STRETCH_SCALE
+		cell.position = positions[index]
+		cell.size = cell_size
+		holder.add_child(cell)
+		cells.append(cell)
+	return cells
+
+
+func _refresh_health_cells(cells: Array[TextureRect], current: float, maximum: float) -> void:
+	var visible_count := 0 if maximum <= 0.0 else clampi(ceili(clampf(current / maximum, 0.0, 1.0) * 4.0), 0, 4)
+	for index: int in cells.size():
+		cells[index].visible = index < visible_count
 
 
 func _setup_sprites() -> void:
@@ -118,11 +169,20 @@ func _setup_sprites() -> void:
 func _build_word_buttons() -> void:
 	for word: Dictionary in GameData.WORDS:
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(0, 74)
+		# The illustrated HUD supplies the cards; the transparent controls keep
+		# the interaction and live text on top of that artwork.
+		btn.flat = true
+		btn.custom_minimum_size = Vector2(0, 58)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		btn.clip_text = true
+		btn.add_theme_font_size_override("font_size", 16)
 		btn.text = "%s\n%d Anger" % [String(word["short"]), int(word["cost"])]
 		btn.add_theme_color_override("font_color", word["color"])
+		btn.add_theme_color_override("font_hover_color", Color(1.0, 0.86, 0.42))
+		btn.add_theme_color_override("font_pressed_color", Color(1.0, 0.72, 0.32))
+		btn.add_theme_color_override("font_outline_color", Color(0.02, 0.025, 0.03, 1.0))
+		btn.add_theme_constant_override("outline_size", 5)
 		btn.pressed.connect(_on_word_pressed.bind(String(word["id"])))
 		# a shared hint line avoids tooltips popping over neighbouring buttons
 		btn.mouse_entered.connect(_show_hint.bind("%s - %s" % [String(word["name"]), String(word["blurb"])]))
@@ -135,11 +195,16 @@ func _build_item_buttons() -> void:
 	for id: String in GameData.ITEMS:
 		var item: Dictionary = GameData.ITEMS[id]
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(0, 52)
+		btn.flat = false
+		btn.custom_minimum_size = Vector2(82, 42)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.clip_text = true
+		btn.add_theme_font_size_override("font_size", 12)
+		btn.add_theme_color_override("font_outline_color", Color(0.02, 0.025, 0.03, 1.0))
+		btn.add_theme_constant_override("outline_size", 4)
 		btn.pressed.connect(_on_item_pressed.bind(id))
-		btn.mouse_entered.connect(_show_hint.bind("%s - %s" % [String(item["name"]), String(item["blurb"])]))
-		btn.mouse_exited.connect(_clear_hint)
+		btn.mouse_entered.connect(_show_utility_hint.bind("%s: %s" % [String(item["name"]), String(item["blurb"])]))
+		btn.mouse_exited.connect(_hide_utility_hint)
 		item_row.add_child(btn)
 		_item_buttons[id] = btn
 
@@ -150,6 +215,15 @@ func _show_hint(text: String) -> void:
 
 func _clear_hint() -> void:
 	hint_label.text = "Hover a line to see what it does."
+
+
+func _show_utility_hint(text: String) -> void:
+	utility_hint_text.text = text
+	utility_hint.show()
+
+
+func _hide_utility_hint() -> void:
+	utility_hint.hide()
 
 
 func _refresh_buttons() -> void:
@@ -165,7 +239,8 @@ func _refresh_buttons() -> void:
 		var item: Dictionary = GameData.ITEMS[id]
 		var btn: Button = _item_buttons[id]
 		var count := GameState.item_count(id)
-		btn.text = "%s  x%d" % [String(item["name"]), count]
+		var short_names := {"coffee": "COFFEE", "bubble_tea": "TEA", "headphones": "HEADPHONES"}
+		btn.text = "%s x%d" % [String(short_names.get(id, item["name"])), count]
 		btn.disabled = _over or _busy or count <= 0
 
 	bite_button.disabled = _over or _busy
@@ -178,21 +253,38 @@ func _refresh(instant := false) -> void:
 	patience_label.text = "%d / %d" % [maxi(GameState.patience, 0), GameState.MAX_PATIENCE]
 	anger_label.text = "%d / %d" % [GameState.anger, GameState.MAX_ANGER]
 	rank_label.text = "Rank: %s" % GameState.rank
+	enemy_health_percent.text = "%d%%" % roundi(_percent(_enemy_hp, _enemy_max))
+	patience_title.text = "PATIENCE  %d%%" % roundi(_percent(GameState.patience, GameState.MAX_PATIENCE))
+	anger_title.text = "ANGER  %d%%" % roundi(_percent(GameState.anger, GameState.MAX_ANGER))
 
 	if instant:
 		enemy_bar.value = _enemy_hp
 		patience_bar.value = GameState.patience
 		anger_bar.value = GameState.anger
+		enemy_bar_visual.value = _enemy_hp
+		patience_bar_visual.value = GameState.patience
+		anger_bar_visual.value = GameState.anger
 	else:
 		var t := create_tween()
 		t.set_parallel(true)
 		t.tween_property(enemy_bar, "value", maxf(_enemy_hp, 0), 0.3)
 		t.tween_property(patience_bar, "value", maxf(GameState.patience, 0), 0.3)
 		t.tween_property(anger_bar, "value", GameState.anger, 0.3)
+		t.tween_property(enemy_bar_visual, "value", maxf(_enemy_hp, 0), 0.3)
+		t.tween_property(patience_bar_visual, "value", maxf(GameState.patience, 0), 0.3)
+		t.tween_property(anger_bar_visual, "value", GameState.anger, 0.3)
+
+	_refresh_health_cells(_enemy_cells, _enemy_hp, _enemy_max)
+	_refresh_health_cells(_patience_cells, GameState.patience, GameState.MAX_PATIENCE)
+	_refresh_health_cells(_anger_cells, GameState.anger, GameState.MAX_ANGER)
 
 	_recolour(_hp_fill, float(GameState.patience) / GameState.MAX_PATIENCE)
 	_recolour(_enemy_fill, float(_enemy_hp) / _enemy_max)
 	_refresh_buttons()
+
+
+func _percent(current: float, maximum: float) -> float:
+	return 0.0 if maximum <= 0.0 else clampf(current / maximum, 0.0, 1.0) * 100.0
 
 
 func _recolour(box: StyleBoxFlat, ratio: float) -> void:
@@ -252,6 +344,23 @@ func _on_word_pressed(id: String) -> void:
 			_shake(6.0, 0.2)
 
 	await get_tree().create_timer(0.6).timeout
+	await _enemy_turn()
+
+
+func _on_bite_pressed() -> void:
+	if _busy or _over:
+		return
+
+	_busy = true
+	_refresh_buttons()
+
+	GameState.add_anger(BITE_ANGER)
+	_say("You bite your tongue and swallow it. The anger stays in the tank.")
+	_tint(player_sprite, Color(0.85, 0.85, 0.85), 0.4)
+	_popup("+%d Anger" % BITE_ANGER, false, Color(0.95, 0.66, 0.25))
+
+	_refresh()
+	await get_tree().create_timer(0.5).timeout
 	await _enemy_turn()
 
 

@@ -4,6 +4,7 @@ extends Control
 
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
 const MAIN_MENU := "res://scenes/MainMenu.tscn"
+const SHOP := "res://scenes/Shop.tscn"
 
 @onready var title: Label = $Panel/Rows/Title
 @onready var subtitle: Label = $Panel/Rows/Subtitle
@@ -12,6 +13,7 @@ const MAIN_MENU := "res://scenes/MainMenu.tscn"
 @onready var next_intro: Label = $Panel/Rows/NextBox/NextIntro
 @onready var chart: GridContainer = $Panel/Rows/NextBox/Chart
 @onready var continue_button: Button = $Panel/Rows/Buttons/ContinueButton
+@onready var shop_button: Button = $"Panel/Rows/Buttons/Go_to_shop"
 @onready var menu_button: Button = $Panel/Rows/Buttons/MenuButton
 
 var _finished := false
@@ -27,6 +29,7 @@ func _ready() -> void:
 		_show_promotion()
 
 	continue_button.pressed.connect(_on_continue)
+	shop_button.pressed.connect(_on_shop)
 	menu_button.pressed.connect(_on_menu)
 
 
@@ -71,6 +74,8 @@ func _on_continue() -> void:
 		GameState.start_new_run()
 	get_tree().change_scene_to_file(WORK_PHASE)
 
+func _on_shop() -> void:
+	get_tree().change_scene_to_file(SHOP)
 
 func _on_menu() -> void:
 	get_tree().change_scene_to_file(MAIN_MENU)
@@ -78,5 +83,5 @@ func _on_menu() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		_on_menu()
 		get_viewport().set_input_as_handled()
+		_on_menu()

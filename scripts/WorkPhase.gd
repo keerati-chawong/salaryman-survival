@@ -247,9 +247,9 @@ func _end_qte(success: bool) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
 		GameState.save_game()
 		get_tree().change_scene_to_file(MAIN_MENU)
-		get_viewport().set_input_as_handled()
 		return
 
 	if not _qte_active:
@@ -295,6 +295,7 @@ func _finish() -> void:
 	_finished = true
 	qte_panel.visible = false
 	objective_label.text = "Quota met. Time for a word in private..."
+	GameState.set_attack_quota(_docs_collected)
 	GameState.save_game()
 	var t := create_tween()
 	t.tween_interval(0.9)

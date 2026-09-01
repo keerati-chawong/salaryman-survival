@@ -3,13 +3,11 @@ extends Control
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
 const OPTIONS_SCENE := "res://scenes/OptionsMenu.tscn"
 const CREDITS_SCENE := "res://scenes/CreditsMenu.tscn"
-const SHOP_SECNE := "res://scenes/Shop.tscn"
 
 @onready var button_new_start: TextureButton = $ButtonNewStart
 @onready var button_continue: TextureButton = $ButtonContinue
 @onready var button_option: TextureButton = $ButtonOption
 @onready var button_credit: TextureButton = $ButtonCredit
-@onready var button_shop: TextureButton = $ButtonShop
 @onready var progress_label: Label = $ProgressLabel
 
 
@@ -65,7 +63,3 @@ func _on_button_option_pressed() -> void:
 
 func _on_button_credit_pressed() -> void:
 	get_tree().change_scene_to_file(CREDITS_SCENE)
-
-
-func _on_button_shop_pressed() -> void:
-	get_tree().change_scene_to_file(SHOP_SECNE)

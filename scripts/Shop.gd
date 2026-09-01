@@ -2,12 +2,18 @@ extends Control
 ## Shop. The vending machine background (assets/backgrounds/shop.png) already
 ## has all 8 snacks/drinks painted into its lit display row - hovering one of
 ## those spots shows its price, clicking buys it immediately. Headphones
-## (armour, not sold from the machine) get their own row in the Accessories
-## panel. See GameData.ITEMS for prices/effects and GameData.ENEMIES'
-## coin_reward + Battle.gd's _win() for how coins are earned.
+## (armour, not sold from the machine) get their own row inside "Your Bag"
+## since that's the only place they can be bought. See GameData.ITEMS for
+## prices/effects and GameData.ENEMIES' coin_reward + Battle.gd's _win() for
+## how coins are earned.
 
 const PROMOTION := "res://scenes/Promotion.tscn"
 const COIN_ICON := preload("res://assets/item/coin.png")
+
+## Headphones are strong enough (halves damage for 2 turns - see Battle.gd)
+## that stockpiling them shouldn't be free; once you own this many, Buy stops
+## working until you use some in a fight.
+const HEADPHONES_MAX_OWNED := 3
 
 ## shop.png is painted at 2528x1686 but the background is shown at 1536x1024 -
 ## every rect below was measured on the source art, so it's scaled down by
@@ -36,7 +42,7 @@ var _tooltip: PanelContainer
 var _tooltip_label: Label
 var _headphones_owned: Label
 var _headphones_buy: Button
-## id -> Label showing "Owned: N" in the bag panel.
+## id -> Label showing "xN" (owned count) in the bag panel.
 var _bag_owned: Dictionary = {}
 
 
@@ -157,21 +163,17 @@ func _build_tooltip() -> void:
 
 func _build_side_panel() -> void:
 	var panel := PanelContainer.new()
-	panel.position = Vector2(1080, 84)
+	## Shifted left of where the 1536px canvas nominally ends - some
+	## players' actual visible/exported viewport crops a bit short of that,
+	## which was clipping the owned-count column and Buy button off the
+	## right edge entirely.
+	panel.position = Vector2(950, 84)
 	panel.size = Vector2(432, 916)
 	add_child(panel)
 
 	var rows := VBoxContainer.new()
 	rows.add_theme_constant_override("separation", 12)
 	panel.add_child(rows)
-
-	var accessories_header := Label.new()
-	accessories_header.theme_type_variation = &"BigStatLabel"
-	accessories_header.text = "Accessories"
-	rows.add_child(accessories_header)
-
-	rows.add_child(_build_headphones_row())
-	rows.add_child(HSeparator.new())
 
 	var bag_header := Label.new()
 	bag_header.theme_type_variation = &"BigStatLabel"
@@ -181,7 +183,7 @@ func _build_side_panel() -> void:
 	var bag_hint := Label.new()
 	bag_hint.theme_type_variation = &"SmallLabel"
 	bag_hint.add_theme_color_override("font_color", Color(0.74, 0.77, 0.83))
-	bag_hint.text = "What you're carrying into the next fight."
+	bag_hint.text = "What you're carrying into the next fight - headphones aren't on the machine, so buy them right here."
 	bag_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rows.add_child(bag_hint)
 
@@ -195,8 +197,14 @@ func _build_side_panel() -> void:
 	bag_list.add_theme_constant_override("separation", 8)
 	scroll.add_child(bag_list)
 
+	## Headphones aren't painted on the vending machine, so their row is the
+	## one exception with an inline Buy button - everything else here is a
+	## read-only tally of what the machine already sold you.
 	for id: String in GameData.ITEMS:
-		bag_list.add_child(_build_bag_row(id, GameData.ITEMS[id]))
+		if id == "headphones":
+			bag_list.add_child(_build_headphones_row())
+		else:
+			bag_list.add_child(_build_bag_row(id, GameData.ITEMS[id]))
 
 
 func _build_headphones_row() -> Control:
@@ -208,14 +216,14 @@ func _build_headphones_row() -> Control:
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture = load(String(item["icon"]))
-	icon.custom_minimum_size = Vector2(40, 40)
+	icon.custom_minimum_size = Vector2(30, 30)
 	row.add_child(icon)
 
 	var text_col := VBoxContainer.new()
 	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var name_label := Label.new()
-	name_label.theme_type_variation = &"StatLabel"
+	name_label.theme_type_variation = &"SmallLabel"
 	name_label.text = String(item["name"])
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_col.add_child(name_label)
@@ -224,17 +232,22 @@ func _build_headphones_row() -> Control:
 	blurb_label.theme_type_variation = &"SmallLabel"
 	blurb_label.add_theme_color_override("font_color", Color(0.74, 0.77, 0.83))
 	blurb_label.text = "%s - %d coins" % [String(item["blurb"]), int(item["price"])]
+	blurb_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_col.add_child(blurb_label)
-
-	_headphones_owned = Label.new()
-	_headphones_owned.theme_type_variation = &"SmallLabel"
-	text_col.add_child(_headphones_owned)
 
 	row.add_child(text_col)
 
+	_headphones_owned = Label.new()
+	_headphones_owned.theme_type_variation = &"StatLabel"
+	_headphones_owned.add_theme_color_override("font_color", Color(1, 0.85, 0.38))
+	_headphones_owned.custom_minimum_size = Vector2(36, 0)
+	_headphones_owned.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_headphones_owned.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_headphones_owned)
+
 	_headphones_buy = Button.new()
 	_headphones_buy.text = "Buy"
-	_headphones_buy.custom_minimum_size = Vector2(74, 40)
+	_headphones_buy.custom_minimum_size = Vector2(56, 40)
 	_headphones_buy.pressed.connect(_on_buy.bind("headphones"))
 	row.add_child(_headphones_buy)
 
@@ -264,9 +277,11 @@ func _build_bag_row(id: String, item: Dictionary) -> Control:
 	row.add_child(text_col)
 
 	var owned_label := Label.new()
-	owned_label.theme_type_variation = &"SmallLabel"
-	owned_label.custom_minimum_size = Vector2(80, 0)
+	owned_label.theme_type_variation = &"StatLabel"
+	owned_label.add_theme_color_override("font_color", Color(1, 0.85, 0.38))
+	owned_label.custom_minimum_size = Vector2(60, 0)
 	owned_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	owned_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(owned_label)
 
 	_bag_owned[id] = owned_label
@@ -296,6 +311,11 @@ func _build_message_bar() -> void:
 func _on_buy(id: String) -> void:
 	var item: Dictionary = GameData.ITEMS[id]
 	var price := int(item["price"])
+
+	if id == "headphones" and GameState.item_count(id) >= HEADPHONES_MAX_OWNED:
+		_message_label.text = "You're already carrying the max (%d) headphones." % HEADPHONES_MAX_OWNED
+		return
+
 	if GameState.spend_coins(price):
 		GameState.grant_item(id)
 		GameState.save_game()
@@ -328,9 +348,11 @@ func _refresh() -> void:
 	_coin_label.text = "%d" % GameState.coins
 
 	var headphones: Dictionary = GameData.ITEMS["headphones"]
-	_headphones_owned.text = "Owned: %d" % GameState.item_count("headphones")
-	_headphones_buy.disabled = GameState.coins < int(headphones["price"])
+	var headphones_owned := GameState.item_count("headphones")
+	_headphones_owned.text = "x%d" % headphones_owned
+	_headphones_buy.disabled = headphones_owned >= HEADPHONES_MAX_OWNED or GameState.coins < int(headphones["price"])
+	_headphones_buy.text = "Max" if headphones_owned >= HEADPHONES_MAX_OWNED else "Buy"
 
 	for id: String in _bag_owned:
 		var owned: Label = _bag_owned[id]
-		owned.text = "Owned: %d" % GameState.item_count(id)
+		owned.text = "x%d" % GameState.item_count(id)

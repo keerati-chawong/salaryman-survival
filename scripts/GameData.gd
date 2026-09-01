@@ -114,22 +114,26 @@ const ENEMIES: Array = [
 	},
 	{
 		"id": "senior",
-		"name": "Micro-Manager Senior",
-		"role": "Team Lead",
+		"name": "The Team Lead",
+		"role": "Micromanager",
 		"hp": 420,
 		"coin_reward": 30,
 		"sprite": "res://assets/characters/enemies/senior.png",
 		"scale": 1.0,
 		"damage": [18, 28],
-		"skill": "interrupt",
-		"skill_name": "Cut You Off",
+		"skills": ["after_hours_ping", "urgent_no_brief"],
+		"skill_name": "After-Hours Ping / Urgent, No Brief",
+		## Chance per enemy turn to raise a shield instead of attacking or
+		## using a skill; see Battle.gd's _roll_guard_stance()/_enemy_guarding.
+		"guard_chance": 0.25,
 		"mult": {"jargon": 1.8, "direct": 1.0, "passive": 1.1, "logic": 0.5},
-		"intro": "Reviews your commas. Never reviews the roadmap.",
+		"intro": "Branded coffee cup in one hand, a KPI folder in the other, phone already buzzing.",
 		"taunts": [
-			"Let me stop you right there.",
-			"Reword that, but keep it the same.",
-			"Send me a status update on the status update.",
+			"Just checking in on the check-in.",
+			"Can we get eyes on this by EOD? Today's EOD.",
+			"I left three comments on a doc you haven't opened yet.",
 		],
+		"defeat": "...I'll note this in your review. Actually - forget I said that.",
 		"promotion": "Team Lead",
 	},
 	{
@@ -181,32 +185,32 @@ const ENEMIES: Array = [
 const ITEMS: Dictionary = {
 	"coffee": {
 		"name": "Black Coffee",
-		"blurb": "+45 Anger",
-		"effect": "anger",
+		"blurb": "+45 Energy",
+		"effect": "energy",
 		"amount": 45,
 		"price": 15,
 		"icon": "res://assets/item/icon_coffee.png",
 	},
 	"energy_bar": {
 		"name": "Energy Bar",
-		"blurb": "+30 Anger",
-		"effect": "anger",
+		"blurb": "+30 Energy",
+		"effect": "energy",
 		"amount": 30,
 		"price": 12,
 		"icon": "res://assets/item/icon_energy_bar.png",
 	},
 	"soda": {
 		"name": "Cola",
-		"blurb": "+50 Anger",
-		"effect": "anger",
+		"blurb": "+50 Energy",
+		"effect": "energy",
 		"amount": 50,
 		"price": 22,
 		"icon": "res://assets/item/icon_soda.png",
 	},
 	"banana": {
 		"name": "Banana",
-		"blurb": "+20 Anger",
-		"effect": "anger",
+		"blurb": "+20 Energy",
+		"effect": "energy",
 		"amount": 20,
 		"price": 8,
 		"icon": "res://assets/item/icon_banana.png",
@@ -245,13 +249,58 @@ const ITEMS: Dictionary = {
 	},
 	"headphones": {
 		"name": "Noise-Cancelling Headphones",
-		"blurb": "Halve the next hit",
+		"blurb": "Halve damage for 2 turns",
 		"effect": "guard",
 		"amount": 1,
 		"price": 35,
 		"icon": "res://assets/item/headphone.png",
 	},
 }
+
+
+## WorkPhase.gd's typing test at GameState.stage_index == i drills (and, if
+## not already unlocked, unlocks) WORDS id STAGE_FOCUS_WORD[i]. Stage 0
+## ("Polite") starts unlocked already, so that run is just practice/Energy
+## farming; a stage past the end of this list (the final boss) has nothing
+## left to unlock and instead drills a random mix of every unlocked id.
+const STAGE_FOCUS_WORD := ["passive", "jargon", "direct", "logic"]
+
+## Target words WorkPhase's typing test pulls from, keyed by the same ids as
+## WORDS so a category typed there maps 1:1 to the attack it powers in Battle.
+## Sourced from the team's Words.txt vocabulary list; multi-word entries (e.g.
+## "Touch base") keep their space - WorkPhase.gd only reserves Spacebar for
+## the QTE dodge while a QTE is actually active, so it's free to type
+## otherwise.
+const TYPING_WORDS: Dictionary = {
+	"jargon": [
+		"bandwidth", "synergy", "deliverable", "touch base", "deep dive",
+		"pain point", "bottleneck", "low hanging fruit", "pivot", "scalable",
+		"boil the ocean", "actionable", "core competency", "stakeholder", "roi",
+		"silo", "onboarding", "paradigm shift", "move the needle", "unpack", "runway",
+	],
+	"direct": [
+		"explicit", "blunt", "frank", "candid", "unambiguous",
+		"concise", "point blank", "outspoken", "forthright", "definitive",
+		"plainspoken", "straightforward", "decisive", "unequivocal", "direct",
+		"unvarnished", "lucid", "categorical", "unreserved", "explicitly", "unfiltered",
+	],
+	"passive": [
+		"courteous", "respectful", "cordially", "deferential", "gracious",
+		"tactful", "considerate", "obliged", "diplomatic", "mannerly",
+		"civil", "affable", "genial", "suave", "defer",
+		"kindly", "obliging", "complaisant", "sollicitous", "attentive", "amenable",
+	],
+	"logic": [
+		"premise", "inference", "deduction", "induction", "fallacy",
+		"validity", "soundness", "rationale", "coherence", "consistency",
+		"causation", "correlation", "syllogism", "axiom", "contradiction",
+		"tautology", "empirical", "hypothesis", "assertion", "postulate", "corroborate",
+	],
+}
+
+
+func typing_words_for(id: String) -> Array:
+	return TYPING_WORDS.get(id, [])
 
 
 func word_by_id(id: String) -> Dictionary:

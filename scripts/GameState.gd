@@ -4,18 +4,33 @@ extends Node
 const SAVE_PATH := "user://save.dat"
 
 const MAX_PATIENCE := 220
-const MAX_ANGER := 100
-## Anger the player keeps when a battle ends, so the work phase always matters.
-const ANGER_CARRY := 0.5
+const MAX_ENERGY := 100
+## Energy the player keeps when a battle ends, so the work phase always matters.
+const ENERGY_CARRY := 0.5
 
 signal stats_changed
 
 var stage_index := 0
 var patience := MAX_PATIENCE
-var anger := 0
+## The WorkPhase -> Battle Energy pipeline: WorkPhase.gd calls add_energy()
+## for every word typed (more for a clean, fast, combo'd word). There is no
+## separate "starting_energy" - this field IS the Battle starting resource,
+## carried over as-is: Battle.gd's word buttons spend directly out of this
+## same value, so a strong typing run means Battle opens with Energy already
+## banked instead of at zero. advance_stage() keeps ENERGY_CARRY (half) of
+## whatever's left after a win, so it still matters going into the next fight.
+var energy := 0
 var rank := "Intern"
 var inventory := {}
 var coins := 0
+## Word-attack uses per fight, per word id, earned by typing that category's
+## words correctly in WorkPhase. Battle.gd reads this once in _ready() and
+## floors each entry at BASE_WORD_USES itself.
+var word_quota: Dictionary = {}
+## Word ids unlocked for use in Battle - permanent progression, persisted to
+## save. "passive" (Polite) starts unlocked; WorkPhase.gd unlocks the rest
+## one per stage (see GameData.STAGE_FOCUS_WORD).
+var unlocked_words: Array = ["passive"]
 
 ## Movement actions are registered in code so the input map lives next to the
 ## gameplay that uses it instead of hand-edited into project.godot.
@@ -44,8 +59,8 @@ func _default_inventory() -> Dictionary:
 	var inv := {}
 	for id: String in GameData.ITEMS:
 		inv[id] = 0
-	inv["coffee"] = 2
-	inv["water"] = 2
+	inv["coffee"] = 1
+	inv["water"] = 1
 	inv["headphones"] = 1
 	return inv
 
@@ -53,10 +68,16 @@ func _default_inventory() -> Dictionary:
 func start_new_run() -> void:
 	stage_index = 0
 	patience = MAX_PATIENCE
-	anger = 0
+	energy = 0
 	rank = "Intern"
 	inventory = _default_inventory()
 	coins = 0
+	word_quota = {}
+	unlocked_words = ["passive"]
+	## A fresh run gets the WorkPhase briefing again, even if a previous run
+	## already dismissed it - "seen it" is scoped to the run, not the install.
+	Settings.has_seen_workphase_intro = false
+	Settings.save_settings()
 	save_game()
 	stats_changed.emit()
 
@@ -78,19 +99,19 @@ func add_patience(delta: int) -> void:
 	set_patience(patience + delta)
 
 
-func set_anger(value: int) -> void:
-	anger = clampi(value, 0, MAX_ANGER)
+func set_energy(value: int) -> void:
+	energy = clampi(value, 0, MAX_ENERGY)
 	stats_changed.emit()
 
 
-func add_anger(delta: int) -> void:
-	set_anger(anger + delta)
+func add_energy(delta: int) -> void:
+	set_energy(energy + delta)
 
 
-func spend_anger(amount: int) -> bool:
-	if anger < amount:
+func spend_energy(amount: int) -> bool:
+	if energy < amount:
 		return false
-	set_anger(anger - amount)
+	set_energy(energy - amount)
 	return true
 
 
@@ -124,13 +145,35 @@ func spend_coins(amount: int) -> bool:
 	return true
 
 
-## Called after a win: promote, restock a little, and carry part of the anger.
+## Called at the end of a WorkPhase run with how many words of each category
+## were typed correctly, so Battle.gd knows how many uses to hand out per
+## word this fight.
+func set_word_quota(counts: Dictionary) -> void:
+	word_quota = {}
+	for id: String in counts:
+		word_quota[id] = maxi(0, int(counts[id]))
+	stats_changed.emit()
+
+
+func is_word_unlocked(id: String) -> bool:
+	return unlocked_words.has(id)
+
+
+func unlock_word(id: String) -> void:
+	if unlocked_words.has(id):
+		return
+	unlocked_words.append(id)
+	stats_changed.emit()
+
+
+## Called after a win: promote, restock a little, and carry part of the energy.
 func advance_stage() -> void:
 	var enemy := current_enemy()
 	rank = String(enemy.get("promotion", rank))
 	stage_index += 1
 	patience = MAX_PATIENCE
-	anger = int(anger * ANGER_CARRY)
+	energy = int(energy * ENERGY_CARRY)
+	word_quota = {}
 	grant_item("coffee", 1)
 	grant_item("water", 1)
 	if stage_index % 2 == 1:
@@ -147,10 +190,12 @@ func save_game() -> void:
 	var payload := {
 		"stage_index": stage_index,
 		"patience": patience,
-		"anger": anger,
+		"energy": energy,
 		"rank": rank,
 		"inventory": inventory,
 		"coins": coins,
+		"word_quota": word_quota,
+		"unlocked_words": unlocked_words,
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:
@@ -174,9 +219,23 @@ func load_game() -> bool:
 	var data: Dictionary = parsed
 	stage_index = clampi(int(data.get("stage_index", 0)), 0, GameData.enemy_count() - 1)
 	patience = clampi(int(data.get("patience", MAX_PATIENCE)), 1, MAX_PATIENCE)
-	anger = clampi(int(data.get("anger", 0)), 0, MAX_ANGER)
+	energy = clampi(int(data.get("energy", 0)), 0, MAX_ENERGY)
 	rank = String(data.get("rank", "Intern"))
 	coins = maxi(0, int(data.get("coins", 0)))
+
+	word_quota = {}
+	var quota: Variant = data.get("word_quota", {})
+	if typeof(quota) == TYPE_DICTIONARY:
+		for id: String in (quota as Dictionary):
+			word_quota[id] = maxi(0, int((quota as Dictionary)[id]))
+
+	unlocked_words = ["passive"]
+	var unlocked: Variant = data.get("unlocked_words", [])
+	if typeof(unlocked) == TYPE_ARRAY:
+		for id: Variant in (unlocked as Array):
+			if not unlocked_words.has(String(id)):
+				unlocked_words.append(String(id))
+
 	var inv: Variant = data.get("inventory", {})
 	inventory = _default_inventory()
 	if typeof(inv) == TYPE_DICTIONARY:

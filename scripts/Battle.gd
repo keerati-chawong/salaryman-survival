@@ -5,11 +5,31 @@ extends Control
 const MAIN_MENU := "res://scenes/MainMenu.tscn"
 const PROMOTION := "res://scenes/Promotion.tscn"
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
-const SHOP := "res://scenes/Shop.tscn"
+const GAME_OVER := "res://scenes/GameOver.tscn"
 
-## Anger regained whenever the enemy lands a hit, per the design's
-## "anger builds when you are insulted" rule.
-const ANGER_ON_HIT := 12
+## Energy regained whenever the enemy lands a hit, per the design's
+## "energy builds when you are insulted" rule.
+const ENERGY_ON_HIT := 12
+
+## Floor for word uses this fight, applied even if WorkPhase's typing quota
+## handed over fewer than this (or nothing at all, e.g. an old save). Scaled
+## by how effective that word is against THIS enemy (see _base_uses_for()):
+## a word this enemy resists barely gets any free uses since spamming it is
+## already a bad idea, while a word that's a weakness gets a generous floor
+## so it can actually carry the fight even off a weak typing run.
+const BASE_USES_BY_EFFECTIVENESS := {
+	"immune": 1,
+	"resisted": 2,
+	"neutral": 2,
+	"weakness": 3,
+	"critical": 4,
+}
+## Hard ceiling on a word's uses this fight regardless of how high WorkPhase's
+## typing quota pushes it - a very good typing run shouldn't be able to make
+## a word effectively unlimited.
+const WORD_USES_CAP := 15
+const APOLOGIZE_COST := 30
+const APOLOGIZE_BONUS_USES := 2
 
 @onready var enemy_sprite: TextureRect = $Enemy
 @onready var enemy_shadow: TextureRect = $EnemyShadow
@@ -18,33 +38,22 @@ const ANGER_ON_HIT := 12
 
 @onready var enemy_name: Label = $EnemyPanel/Rows/TitleRow/EnemyName
 @onready var enemy_role: Label = $EnemyPanel/Rows/TitleRow/EnemyRole
-@onready var enemy_health_percent: Label = $EnemyPanel/Rows/TitleRow/EnemyHealthPercent
 @onready var enemy_bar: ProgressBar = $EnemyPanel/Rows/BarRow/EnemyHPBar
 @onready var enemy_hp_label: Label = $EnemyPanel/Rows/BarRow/EnemyHPLabel
-@onready var enemy_bar_visual: ProgressBar = $EnemyHealthBarVisual
 
 @onready var patience_bar: ProgressBar = $PlayerPanel/Cols/Bars/HPRow/PatienceBar
 @onready var patience_label: Label = $PlayerPanel/Cols/Bars/HPRow/PatienceLabel
-@onready var anger_bar: ProgressBar = $PlayerPanel/Cols/Bars/MPRow/AngerBar
-@onready var anger_label: Label = $PlayerPanel/Cols/Bars/MPRow/AngerLabel
-@onready var rank_label: Label = $PlayerPanel/Cols/Bars/RankLabel
-@onready var patience_bar_visual: ProgressBar = $PatienceBarVisual
-@onready var anger_bar_visual: ProgressBar = $AngerBarVisual
-
-@onready var enemy_cells: Control = $EnemyCells
-@onready var patience_cells: Control = $PatienceCells
-@onready var anger_cells: Control = $AngerCells
-@onready var patience_title: Label = $PatienceTitle
-@onready var anger_title: Label = $AngerTitle
+@onready var energy_bar: ProgressBar = $PlayerPanel/Cols/Bars/MPRow/EnergyBar
+@onready var energy_label: Label = $PlayerPanel/Cols/Bars/MPRow/EnergyLabel
+@onready var rank_label: Label = $PlayerPanel/Cols/Bars/BottomRow/RankLabel
+@onready var coin_label: Label = $PlayerPanel/Cols/Bars/BottomRow/CoinLabel
 
 @onready var word_grid: GridContainer = $ActionPanel/Rows/WordGrid
-@onready var item_row: HBoxContainer = $UtilityRow/ItemRow
-@onready var bite_button: Button = $UtilityRow/BiteButton
+@onready var item_row: HBoxContainer = $ActionPanel/Rows/ItemRow
+@onready var bite_button: Button = $ActionPanel/Rows/BiteButton
 @onready var hint_label: Label = $ActionPanel/Rows/HintLabel
-@onready var utility_hint: PanelContainer = $UtilityHint
-@onready var utility_hint_text: Label = $UtilityHint/Text
 
-const BITE_ANGER := 15
+const BITE_ENERGY := 15
 @onready var message_label: Label = $MessagePanel/MessageLabel
 @onready var popup_label: Label = $DamagePopup
 @onready var flash_overlay: ColorRect = $FlashOverlay
@@ -56,17 +65,22 @@ var _enemy_max := 0
 
 var _busy := false
 var _over := false
-var _guard_next := false
+## Headphones halve the next hit for this many of the enemy's turns (only
+## ticks down on a turn that actually lands damage - see _consume_guard()).
+var _guard_turns_left := 0
 var _silenced := ""
 var _interrupted := false
+var _enemy_guarding := false
 
 var _word_buttons: Dictionary = {}
+var _word_uses: Dictionary = {}
+var _word_max_uses: Dictionary = {}
+var _apologize_button: Button
 
-## The bag is one button on the utility row that opens a modal grid of item
-## icons; _backpack_slots maps item id -> {"btn", "icon", "count"}.
 var _backpack_button: Button
 var _backpack_overlay: Control
-var _backpack_hint: Label
+var _backpack_hint_label: Label
+## id -> {"btn": Button, "icon": TextureRect, "count": Label}
 var _backpack_slots: Dictionary = {}
 
 var _player_home: Vector2
@@ -81,10 +95,6 @@ var _enemy_down := false
 
 var _hp_fill := StyleBoxFlat.new()
 var _enemy_fill := StyleBoxFlat.new()
-var _anger_fill := StyleBoxFlat.new()
-var _enemy_cells: Array[TextureRect] = []
-var _patience_cells: Array[TextureRect] = []
-var _anger_cells: Array[TextureRect] = []
 
 
 func _ready() -> void:
@@ -93,17 +103,55 @@ func _ready() -> void:
 	_enemy_max = int(_enemy["hp"])
 	_enemy_hp = _enemy_max
 
+	_init_word_uses()
 	_setup_enemy_visuals()
 	_setup_bars()
 	_build_word_buttons()
 	_build_backpack_button()
 	_build_backpack_overlay()
-	bite_button.mouse_entered.connect(_show_utility_hint.bind("Bite Tongue: gain 15 Anger. Free to use, but ends your turn."))
-	bite_button.mouse_exited.connect(_hide_utility_hint)
+	_build_apologize_button()
+	bite_button.mouse_entered.connect(_show_hint.bind("A free way to keep going when you're out of Energy and items."))
+	bite_button.mouse_exited.connect(_clear_hint)
 	_setup_sprites()
 	_refresh(true)
 
 	_say("%s\n%s" % [String(_enemy["intro"]), "Pick your words carefully."])
+
+
+## Only words unlocked so far (GameState.unlocked_words - "Polite" from the
+## start, the rest unlocked one per stage by WorkPhase's typing test) are
+## usable at all. Each unlocked word's uses this fight come from how many of
+## that category were typed correctly in WorkPhase (GameState.word_quota),
+## floored at a per-enemy amount based on that word's effectiveness this
+## fight (see _base_uses_for()) so an empty/old save can't hard-lock a fight,
+## and capped at WORD_USES_CAP so a very strong typing run can't make a word
+## effectively unlimited.
+func _init_word_uses() -> void:
+	var mult_table: Dictionary = _enemy.get("mult", {})
+	for word: Dictionary in GameData.WORDS:
+		var id := String(word["id"])
+		if not GameState.is_word_unlocked(id):
+			continue
+		var mult := float(mult_table.get(id, 1.0))
+		var base := _base_uses_for(mult)
+		var uses := mini(maxi(int(GameState.word_quota.get(id, 0)), base), WORD_USES_CAP)
+		_word_uses[id] = uses
+		_word_max_uses[id] = uses
+
+
+## Mirrors GameData.effectiveness_label()'s thresholds so the floor tracks
+## the same "immune/resisted/neutral/weakness/critical" bands shown in the
+## damage popup and Promotion's reaction chart.
+func _base_uses_for(mult: float) -> int:
+	if is_equal_approx(mult, GameData.IMMUNE):
+		return int(BASE_USES_BY_EFFECTIVENESS["immune"])
+	if mult >= GameData.CRITICAL_AT:
+		return int(BASE_USES_BY_EFFECTIVENESS["critical"])
+	if mult > 1.0:
+		return int(BASE_USES_BY_EFFECTIVENESS["weakness"])
+	if mult < 1.0:
+		return int(BASE_USES_BY_EFFECTIVENESS["resisted"])
+	return int(BASE_USES_BY_EFFECTIVENESS["neutral"])
 
 
 func _setup_enemy_visuals() -> void:
@@ -118,49 +166,14 @@ func _setup_bars() -> void:
 	_enemy_fill.bg_color = Color(0.78, 0.2, 0.24)
 	_enemy_fill.set_corner_radius_all(2)
 	enemy_bar.add_theme_stylebox_override("fill", _enemy_fill)
-	enemy_bar_visual.add_theme_stylebox_override("fill", _enemy_fill)
 
 	_hp_fill.bg_color = Color(0.78, 0.2, 0.24)
 	_hp_fill.set_corner_radius_all(2)
 	patience_bar.add_theme_stylebox_override("fill", _hp_fill)
-	patience_bar_visual.add_theme_stylebox_override("fill", _hp_fill)
-
-	_anger_fill.bg_color = Color(0.28, 0.52, 0.62)
-	_anger_fill.set_corner_radius_all(2)
-	anger_bar_visual.add_theme_stylebox_override("fill", _anger_fill)
-	var transparent_bar := StyleBoxEmpty.new()
-	enemy_bar_visual.add_theme_stylebox_override("background", transparent_bar)
-	patience_bar_visual.add_theme_stylebox_override("background", transparent_bar)
-	anger_bar_visual.add_theme_stylebox_override("background", transparent_bar)
 
 	enemy_bar.max_value = _enemy_max
 	patience_bar.max_value = GameState.MAX_PATIENCE
-	anger_bar.max_value = GameState.MAX_ANGER
-	enemy_bar_visual.max_value = _enemy_max
-	patience_bar_visual.max_value = GameState.MAX_PATIENCE
-	anger_bar_visual.max_value = GameState.MAX_ANGER
-
-
-func _make_health_cells(holder: Control, texture_path: String, positions: Array[Vector2], cell_size: Vector2) -> Array[TextureRect]:
-	var cells: Array[TextureRect] = []
-	var fill_texture := load(texture_path) as Texture2D
-	for index: int in 4:
-		var cell := TextureRect.new()
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cell.texture = fill_texture
-		cell.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		cell.stretch_mode = TextureRect.STRETCH_SCALE
-		cell.position = positions[index]
-		cell.size = cell_size
-		holder.add_child(cell)
-		cells.append(cell)
-	return cells
-
-
-func _refresh_health_cells(cells: Array[TextureRect], current: float, maximum: float) -> void:
-	var visible_count := 0 if maximum <= 0.0 else clampi(ceili(clampf(current / maximum, 0.0, 1.0) * 4.0), 0, 4)
-	for index: int in cells.size():
-		cells[index].visible = index < visible_count
+	energy_bar.max_value = GameState.MAX_ENERGY
 
 
 func _setup_sprites() -> void:
@@ -174,50 +187,42 @@ func _setup_sprites() -> void:
 
 # ------------------------------------------------------------ ui building ---
 
+## Locked words (GameState.unlocked_words) don't get a button at all - there's
+## nothing useful to show for a skill you haven't earned yet.
 func _build_word_buttons() -> void:
 	for word: Dictionary in GameData.WORDS:
+		var id := String(word["id"])
+		if not GameState.is_word_unlocked(id):
+			continue
 		var btn := Button.new()
-		# The illustrated HUD supplies the cards; the transparent controls keep
-		# the interaction and live text on top of that artwork.
-		btn.flat = true
-		btn.custom_minimum_size = Vector2(0, 58)
+		btn.custom_minimum_size = Vector2(0, 74)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		btn.clip_text = true
-		btn.add_theme_font_size_override("font_size", 16)
-		btn.text = "%s\n%d Anger" % [String(word["short"]), int(word["cost"])]
+		btn.text = "%s\n%d Energy" % [String(word["short"]), int(word["cost"])]
 		btn.add_theme_color_override("font_color", word["color"])
-		btn.add_theme_color_override("font_hover_color", Color(1.0, 0.86, 0.42))
-		btn.add_theme_color_override("font_pressed_color", Color(1.0, 0.72, 0.32))
-		btn.add_theme_color_override("font_outline_color", Color(0.02, 0.025, 0.03, 1.0))
-		btn.add_theme_constant_override("outline_size", 5)
-		btn.pressed.connect(_on_word_pressed.bind(String(word["id"])))
+		btn.pressed.connect(_on_word_pressed.bind(id))
 		# a shared hint line avoids tooltips popping over neighbouring buttons
 		btn.mouse_entered.connect(_show_hint.bind("%s - %s" % [String(word["name"]), String(word["blurb"])]))
 		btn.mouse_exited.connect(_clear_hint)
 		word_grid.add_child(btn)
-		_word_buttons[String(word["id"])] = btn
+		_word_buttons[id] = btn
 
 
-## One button on the utility row instead of nine cramped ones. Its label
-## carries the total item count; the grid of icons lives in the overlay.
+## Nine items is too many to lay out inline in ItemRow, so it holds a single
+## button that opens the backpack overlay instead.
 func _build_backpack_button() -> void:
 	_backpack_button = Button.new()
-	_backpack_button.custom_minimum_size = Vector2(150, 42)
-	_backpack_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	_backpack_button.add_theme_font_size_override("font_size", 12)
-	_backpack_button.add_theme_color_override("font_outline_color", Color(0.1, 0.12, 0.2, 1))
-	_backpack_button.add_theme_constant_override("outline_size", 2)
-	_backpack_button.text = "BAG"
+	_backpack_button.custom_minimum_size = Vector2(0, 52)
+	_backpack_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_backpack_button.pressed.connect(_open_backpack)
-	_backpack_button.mouse_entered.connect(_show_utility_hint.bind("Open your bag to use a snack, drink, or your headphones."))
-	_backpack_button.mouse_exited.connect(_hide_utility_hint)
+	_backpack_button.mouse_entered.connect(_show_hint.bind("Open your backpack to use a snack, drink, or your headphones."))
+	_backpack_button.mouse_exited.connect(_clear_hint)
 	item_row.add_child(_backpack_button)
 
 
-## A modal grid of every item as an icon + count, built once and toggled with
-## _open_backpack()/_close_backpack(). A dim full-screen button behind it
-## closes the grid when the player clicks away.
+## A modal grid of every item: a dim full-screen button (click outside to
+## close) behind a panel of icon slots, built once and toggled with
+## _open_backpack()/_close_backpack() instead of rebuilt each time.
 func _build_backpack_overlay() -> void:
 	_backpack_overlay = Control.new()
 	_backpack_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -229,104 +234,89 @@ func _build_backpack_overlay() -> void:
 	dim.focus_mode = Control.FOCUS_NONE
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var dim_style := StyleBoxFlat.new()
-	dim_style.bg_color = Color(0.02, 0.03, 0.05, 0.66)
+	dim_style.bg_color = Color(0, 0, 0, 0.6)
 	for state: String in ["normal", "hover", "pressed", "focus"]:
 		dim.add_theme_stylebox_override(state, dim_style)
 	dim.pressed.connect(_close_backpack)
 	_backpack_overlay.add_child(dim)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(760, 520)
-	panel.position = Vector2(768.0 - 380.0, 512.0 - 260.0)
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.09, 0.11, 0.16, 0.98)
-	panel_style.border_color = Color(0.32, 0.42, 0.6, 0.9)
-	panel_style.set_border_width_all(2)
-	panel_style.set_corner_radius_all(10)
-	panel_style.set_content_margin_all(22)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	panel.position = Vector2(300, 210)
+	panel.size = Vector2(936, 560)
 	_backpack_overlay.add_child(panel)
 
 	var rows := VBoxContainer.new()
-	rows.add_theme_constant_override("separation", 16)
+	rows.add_theme_constant_override("separation", 14)
 	panel.add_child(rows)
 
 	var header := HBoxContainer.new()
 	var title := Label.new()
-	title.text = "BAG"
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", Color(1, 0.86, 0.42))
+	title.theme_type_variation = &"HeaderLabel"
+	title.text = "BACKPACK"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	var close_button := Button.new()
 	close_button.text = "Close"
-	close_button.custom_minimum_size = Vector2(88, 38)
+	close_button.custom_minimum_size = Vector2(90, 40)
 	close_button.pressed.connect(_close_backpack)
 	header.add_child(close_button)
 	rows.add_child(header)
 
 	var grid := GridContainer.new()
 	grid.columns = 5
-	grid.add_theme_constant_override("h_separation", 16)
-	grid.add_theme_constant_override("v_separation", 16)
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 14)
 	rows.add_child(grid)
 
 	for id: String in GameData.ITEMS:
 		grid.add_child(_build_backpack_slot(id, GameData.ITEMS[id]))
 
-	_backpack_hint = Label.new()
-	_backpack_hint.add_theme_font_size_override("font_size", 14)
-	_backpack_hint.add_theme_color_override("font_color", Color(0.8, 0.84, 0.92))
-	_backpack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_backpack_hint.custom_minimum_size = Vector2(0, 26)
-	_backpack_hint.text = "Hover an item to see what it does."
-	rows.add_child(_backpack_hint)
+	## The overlay is drawn on top of ActionPanel/HintLabel, so hovering a
+	## slot needs its own visible hint line instead of the hidden one behind it.
+	_backpack_hint_label = Label.new()
+	_backpack_hint_label.theme_type_variation = &"SmallLabel"
+	_backpack_hint_label.add_theme_color_override("font_color", Color(0.82, 0.85, 0.9))
+	_backpack_hint_label.text = "Hover an item to see what it does."
+	_backpack_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rows.add_child(_backpack_hint_label)
 
 
-## A slot is an icon TextureRect + a count Label laid on a flat Button, sized
-## by hand: Button isn't a Container, so nothing re-lays the children out.
+## A slot is composed by hand (icon + count Label overlaid on a plain Button)
+## rather than using Button.icon - at this size Button's built-in icon+text
+## layout squeezes the icon down to an unreadable sliver.
 func _build_backpack_slot(id: String, item: Dictionary) -> Control:
-	const SLOT := Vector2(128, 132)
+	const SLOT_SIZE := Vector2(96, 108)
 
 	var btn := Button.new()
-	btn.custom_minimum_size = SLOT
-	btn.focus_mode = Control.FOCUS_NONE
-	var slot_normal := StyleBoxFlat.new()
-	slot_normal.bg_color = Color(0.13, 0.16, 0.22, 1.0)
-	slot_normal.set_corner_radius_all(8)
-	slot_normal.set_border_width_all(1)
-	slot_normal.border_color = Color(0.28, 0.34, 0.46, 0.8)
-	var slot_hover := slot_normal.duplicate() as StyleBoxFlat
-	slot_hover.bg_color = Color(0.2, 0.26, 0.36, 1.0)
-	slot_hover.border_color = Color(1.0, 0.82, 0.4, 0.9)
-	btn.add_theme_stylebox_override("normal", slot_normal)
-	btn.add_theme_stylebox_override("hover", slot_hover)
-	btn.add_theme_stylebox_override("pressed", slot_hover)
-	btn.add_theme_stylebox_override("disabled", slot_normal)
-	btn.pressed.connect(_use_from_backpack.bind(id))
-	var hint := "%s  -  %s" % [String(item["name"]), String(item["blurb"])]
-	btn.mouse_entered.connect(func() -> void: _backpack_hint.text = hint)
-	btn.mouse_exited.connect(func() -> void: _backpack_hint.text = "Hover an item to see what it does.")
+	btn.custom_minimum_size = SLOT_SIZE
+	btn.pressed.connect(_on_backpack_item_pressed.bind(id))
+	var hint := "%s - %s" % [String(item["name"]), String(item["blurb"])]
+	btn.mouse_entered.connect(func() -> void: _backpack_hint_label.text = hint)
+	btn.mouse_exited.connect(func() -> void: _backpack_hint_label.text = "Hover an item to see what it does.")
 
+	## expand_mode/stretch_mode must be set BEFORE the texture: assigning the
+	## texture while still on the default EXPAND_KEEP_SIZE locks the node's
+	## minimum size to the full source image, and the size set below (a plain
+	## Button isn't a Container, so nothing re-lays this out afterward) gets
+	## clamped straight back up to that oversized minimum.
 	var icon := TextureRect.new()
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture = load(String(item["icon"]))
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	icon.position = Vector2((SLOT.x - 72.0) * 0.5, 12.0)
-	icon.size = Vector2(72, 72)
+	icon.position = Vector2((SLOT_SIZE.x - 56.0) * 0.5, 10.0)
+	icon.size = Vector2(56, 56)
 	btn.add_child(icon)
 
-	var count := Label.new()
-	count.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	count.add_theme_font_size_override("font_size", 15)
-	count.add_theme_color_override("font_color", Color(0.95, 0.96, 1.0))
-	count.position = Vector2(0, SLOT.y - 30.0)
-	count.size = Vector2(SLOT.x, 24)
-	btn.add_child(count)
+	var count_label := Label.new()
+	count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	count_label.theme_type_variation = &"SmallLabel"
+	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count_label.position = Vector2(0, SLOT_SIZE.y - 28.0)
+	count_label.size = Vector2(SLOT_SIZE.x, 24)
+	btn.add_child(count_label)
 
-	_backpack_slots[id] = {"btn": btn, "icon": icon, "count": count}
+	_backpack_slots[id] = {"btn": btn, "icon": icon, "count": count_label}
 	return btn
 
 
@@ -339,9 +329,10 @@ func _open_backpack() -> void:
 
 func _close_backpack() -> void:
 	_backpack_overlay.visible = false
+	_clear_hint()
 
 
-func _use_from_backpack(id: String) -> void:
+func _on_backpack_item_pressed(id: String) -> void:
 	_close_backpack()
 	_on_item_pressed(id)
 
@@ -349,11 +340,28 @@ func _use_from_backpack(id: String) -> void:
 func _refresh_backpack() -> void:
 	for id: String in _backpack_slots:
 		var slot: Dictionary = _backpack_slots[id]
+		var btn: Button = slot["btn"]
+		var icon: TextureRect = slot["icon"]
+		var count_label: Label = slot["count"]
 		var count := GameState.item_count(id)
+		count_label.text = "x%d" % count
 		var blocked := _over or _busy or count <= 0
-		slot["count"].text = "x%d" % count
-		slot["btn"].disabled = blocked
-		slot["icon"].modulate = Color(1, 1, 1, 1) if not blocked else Color(1, 1, 1, 0.3)
+		btn.disabled = blocked
+		icon.modulate = Color(1, 1, 1, 1) if not blocked else Color(1, 1, 1, 0.35)
+
+
+## Hidden until every word is out of uses - the crisis fallback: trade
+## Patience to keep the fight going instead of being locked out entirely.
+func _build_apologize_button() -> void:
+	_apologize_button = Button.new()
+	_apologize_button.text = "Apologize  (-%d Energy, +%d uses each)" % [APOLOGIZE_COST, APOLOGIZE_BONUS_USES]
+	_apologize_button.custom_minimum_size = bite_button.custom_minimum_size
+	_apologize_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apologize_button.visible = false
+	_apologize_button.pressed.connect(_on_apologize_pressed)
+	_apologize_button.mouse_entered.connect(_show_hint.bind("Only appears when every word is out of uses. Costly, but keeps you in the fight."))
+	_apologize_button.mouse_exited.connect(_clear_hint)
+	bite_button.get_parent().add_child(_apologize_button)
 
 
 func _show_hint(text: String) -> void:
@@ -364,33 +372,33 @@ func _clear_hint() -> void:
 	hint_label.text = "Hover a line to see what it does."
 
 
-func _show_utility_hint(text: String) -> void:
-	utility_hint_text.text = text
-	utility_hint.show()
-
-
-func _hide_utility_hint() -> void:
-	utility_hint.hide()
-
-
 func _refresh_buttons() -> void:
+	var out_of_words := true
 	for id: String in _word_buttons:
 		var word := GameData.word_by_id(id)
 		var btn: Button = _word_buttons[id]
-		var blocked := _over or _busy or _silenced == id or GameState.anger < int(word["cost"])
+		var uses := int(_word_uses.get(id, 0))
+		if uses > 0:
+			out_of_words = false
+		var blocked := _over or _busy or _silenced == id or uses <= 0 or GameState.energy < int(word["cost"])
 		btn.disabled = blocked
 		var suffix := "  (silenced)" if _silenced == id else ""
-		btn.text = "%s%s\n%d Anger" % [String(word["short"]), suffix, int(word["cost"])]
+		btn.text = "%s%s  (%d/%d)\n%d Energy" % [
+			String(word["short"]), suffix, uses, int(_word_max_uses.get(id, uses)), int(word["cost"]),
+		]
 
 	var total_items := 0
 	for id: String in GameData.ITEMS:
 		total_items += GameState.item_count(id)
-	_backpack_button.text = "BAG  (%d)" % total_items
+	_backpack_button.text = "Open Backpack  (%d items)" % total_items
 	_backpack_button.disabled = _over or _busy
 	if _backpack_overlay.visible:
 		_refresh_backpack()
 
 	bite_button.disabled = _over or _busy
+
+	_apologize_button.visible = out_of_words
+	_apologize_button.disabled = _over or _busy or GameState.energy < APOLOGIZE_COST
 
 
 # ------------------------------------------------------------------ state ---
@@ -398,40 +406,24 @@ func _refresh_buttons() -> void:
 func _refresh(instant := false) -> void:
 	enemy_hp_label.text = "%d / %d" % [maxi(_enemy_hp, 0), _enemy_max]
 	patience_label.text = "%d / %d" % [maxi(GameState.patience, 0), GameState.MAX_PATIENCE]
-	anger_label.text = "%d / %d" % [GameState.anger, GameState.MAX_ANGER]
+	energy_label.text = "%d / %d" % [GameState.energy, GameState.MAX_ENERGY]
 	rank_label.text = "Rank: %s" % GameState.rank
-	enemy_health_percent.text = "%d%%" % roundi(_percent(_enemy_hp, _enemy_max))
-	patience_title.text = "PATIENCE  %d%%" % roundi(_percent(GameState.patience, GameState.MAX_PATIENCE))
-	anger_title.text = "ANGER  %d%%" % roundi(_percent(GameState.anger, GameState.MAX_ANGER))
+	coin_label.text = "%d coins" % GameState.coins
 
 	if instant:
 		enemy_bar.value = _enemy_hp
 		patience_bar.value = GameState.patience
-		anger_bar.value = GameState.anger
-		enemy_bar_visual.value = _enemy_hp
-		patience_bar_visual.value = GameState.patience
-		anger_bar_visual.value = GameState.anger
+		energy_bar.value = GameState.energy
 	else:
 		var t := create_tween()
 		t.set_parallel(true)
 		t.tween_property(enemy_bar, "value", maxf(_enemy_hp, 0), 0.3)
 		t.tween_property(patience_bar, "value", maxf(GameState.patience, 0), 0.3)
-		t.tween_property(anger_bar, "value", GameState.anger, 0.3)
-		t.tween_property(enemy_bar_visual, "value", maxf(_enemy_hp, 0), 0.3)
-		t.tween_property(patience_bar_visual, "value", maxf(GameState.patience, 0), 0.3)
-		t.tween_property(anger_bar_visual, "value", GameState.anger, 0.3)
-
-	_refresh_health_cells(_enemy_cells, _enemy_hp, _enemy_max)
-	_refresh_health_cells(_patience_cells, GameState.patience, GameState.MAX_PATIENCE)
-	_refresh_health_cells(_anger_cells, GameState.anger, GameState.MAX_ANGER)
+		t.tween_property(energy_bar, "value", GameState.energy, 0.3)
 
 	_recolour(_hp_fill, float(GameState.patience) / GameState.MAX_PATIENCE)
 	_recolour(_enemy_fill, float(_enemy_hp) / _enemy_max)
 	_refresh_buttons()
-
-
-func _percent(current: float, maximum: float) -> float:
-	return 0.0 if maximum <= 0.0 else clampf(current / maximum, 0.0, 1.0) * 100.0
 
 
 func _recolour(box: StyleBoxFlat, ratio: float) -> void:
@@ -453,12 +445,30 @@ func _on_word_pressed(id: String) -> void:
 	if _busy or _over:
 		return
 	var word := GameData.word_by_id(id)
-	if not GameState.spend_anger(int(word["cost"])):
-		_say("Not enough Anger for that one.")
+	if int(_word_uses.get(id, 0)) <= 0:
+		_say("You're out of ways to say that this fight.")
+		return
+	if not GameState.spend_energy(int(word["cost"])):
+		_say("Not enough Energy for that one.")
 		return
 
 	_busy = true
+	_word_uses[id] = int(_word_uses[id]) - 1
 	_refresh_buttons()
+
+	## The enemy telegraphed a guard stance last turn - the line is spent
+	## for nothing, same as GameData's guard_chance comment describes.
+	if _enemy_guarding:
+		_enemy_guarding = false
+		var blocked_lines: Array = word["lines"]
+		_say('"%s"' % String(blocked_lines[randi() % blocked_lines.size()]))
+		_lunge("player", 330.0, -30.0)
+		await get_tree().create_timer(0.22).timeout
+		_popup("BLOCKED", true, Color(0.6, 0.75, 1.0))
+		_say("%s saw that coming. Fully blocked - the line doesn't land." % String(_enemy["name"]))
+		await get_tree().create_timer(0.6).timeout
+		await _enemy_turn()
+		return
 
 	var mult := float((_enemy["mult"] as Dictionary).get(id, 1.0))
 	var base := int(word["power"] * randf_range(0.85, 1.15))
@@ -501,10 +511,41 @@ func _on_bite_pressed() -> void:
 	_busy = true
 	_refresh_buttons()
 
-	GameState.add_anger(BITE_ANGER)
-	_say("You bite your tongue and swallow it. The anger stays in the tank.")
+	GameState.add_energy(BITE_ENERGY)
+	_say("You bite your tongue and swallow it. The energy stays in the tank.")
 	_tint(player_sprite, Color(0.85, 0.85, 0.85), 0.4)
-	_popup("+%d Anger" % BITE_ANGER, false, Color(0.95, 0.66, 0.25))
+	_popup("+%d Energy" % BITE_ENERGY, false, Color(0.95, 0.66, 0.25))
+
+	_refresh()
+	await get_tree().create_timer(0.5).timeout
+	await _enemy_turn()
+
+
+## Crisis fallback once every word is out of uses: burn Energy to keep the
+## fight going rather than being stuck with only Bite/items. Guarded by
+## spend_energy() rather than a flat subtract since - unlike the old Patience
+## cost - going below the amount actually blocks the action instead of just
+## clamping toward a loss.
+##
+## This refills uses back toward each word's existing max (set once in
+## _init_word_uses()) - it does NOT raise the max itself. Bumping both
+## together let repeated Apologizing inflate a word's ceiling indefinitely
+## (e.g. 0/2 -> 2/4 -> 4/6...), which defeated the point of WORD_USES_CAP.
+func _on_apologize_pressed() -> void:
+	if _busy or _over:
+		return
+	if not GameState.spend_energy(APOLOGIZE_COST):
+		return
+
+	_busy = true
+	_refresh_buttons()
+
+	for id: String in _word_uses:
+		var cap := int(_word_max_uses.get(id, 0))
+		_word_uses[id] = mini(int(_word_uses[id]) + APOLOGIZE_BONUS_USES, cap)
+	_say("You apologise for existing. It buys you a couple more lines on everything.")
+	_tint(player_sprite, Color(0.8, 0.8, 0.85), 0.4)
+	_popup("-%d Energy, +%d uses each" % [APOLOGIZE_COST, APOLOGIZE_BONUS_USES], false, Color(0.85, 0.6, 0.6))
 
 	_refresh()
 	await get_tree().create_timer(0.5).timeout
@@ -521,20 +562,20 @@ func _on_item_pressed(id: String) -> void:
 	_refresh_buttons()
 
 	var item: Dictionary = GameData.ITEMS[id]
-	var item_name := String(item["name"])
-	var item_blurb := String(item["blurb"])
+	var name := String(item["name"])
+	var blurb := String(item["blurb"])
 	match String(item["effect"]):
-		"anger":
-			GameState.add_anger(int(item["amount"]))
-			_say("%s. %s." % [item_name, item_blurb])
+		"energy":
+			GameState.add_energy(int(item["amount"]))
+			_say("%s. %s." % [name, blurb])
 			_tint(player_sprite, Color(1.25, 0.95, 0.6), 0.5)
 		"hp":
 			GameState.add_patience(int(item["amount"]))
-			_say("%s. %s." % [item_name, item_blurb])
+			_say("%s. %s." % [name, blurb])
 			_tint(player_sprite, Color(0.6, 1.25, 0.7), 0.5)
 		"guard":
-			_guard_next = true
-			_say("%s on. Whatever they say next lands softer." % item_name)
+			_guard_turns_left = 2
+			_say("%s on. Whatever they say for the next two turns lands softer." % name)
 			_tint(player_sprite, Color(0.62, 0.78, 1.25), 0.5)
 
 	var hop := create_tween()
@@ -555,28 +596,29 @@ func _enemy_turn() -> void:
 
 	_silenced = ""
 
-	var used_skill := await _try_skill()
-	if not used_skill:
-		var dmg_range: Array = _enemy["damage"]
-		var dmg := randi_range(int(dmg_range[0]), int(dmg_range[1]))
-		dmg = int(dmg * [0.75, 1.0, 1.3][clampi(Settings.difficulty, 0, 2)])
-		if _guard_next:
-			dmg = int(dmg * 0.5)
-			_guard_next = false
+	if _roll_guard_stance():
+		_enter_guard_stance()
+	else:
+		var used_skill := await _try_skill()
+		if not used_skill:
+			var dmg_range: Array = _enemy["damage"]
+			var dmg := randi_range(int(dmg_range[0]), int(dmg_range[1]))
+			dmg = int(dmg * [0.75, 1.0, 1.3][clampi(Settings.difficulty, 0, 2)])
+			dmg = int(dmg * _consume_guard())
 
-		var taunts: Array = _enemy["taunts"]
-		_say('"%s"' % String(taunts[randi() % taunts.size()]))
+			var taunts: Array = _enemy["taunts"]
+			_say('"%s"' % String(taunts[randi() % taunts.size()]))
 
-		_lunge("enemy", -400.0, -10.0)
-		await get_tree().create_timer(0.22).timeout
+			_lunge("enemy", -400.0, -10.0)
+			await get_tree().create_timer(0.22).timeout
 
-		GameState.add_patience(-dmg)
-		GameState.add_anger(ANGER_ON_HIT)
-		_popup("-%d" % dmg, false, Color(1.0, 0.5, 0.45))
-		_recoil("player", -40.0)
-		_flash(Color(0.9, 0.2, 0.2), 0.3, 0.3)
-		_shake(10.0, 0.3)
-		_refresh()
+			GameState.add_patience(-dmg)
+			GameState.add_energy(ENERGY_ON_HIT)
+			_popup("-%d" % dmg, false, Color(1.0, 0.5, 0.45))
+			_recoil("player", -40.0)
+			_flash(Color(0.9, 0.2, 0.2), 0.3, 0.3)
+			_shake(10.0, 0.3)
+			_refresh()
 
 	await get_tree().create_timer(0.65).timeout
 
@@ -587,9 +629,38 @@ func _enemy_turn() -> void:
 		_refresh_buttons()
 
 
+## Enemies with a "guard_chance" occasionally spend a whole turn setting up
+## a shield instead of attacking, telegraphed one full player turn ahead so
+## it can be read and played around rather than feeling like a coin flip.
+func _roll_guard_stance() -> bool:
+	var chance := float(_enemy.get("guard_chance", 0.0))
+	return chance > 0.0 and not _enemy_guarding and randf() < chance
+
+
+## Headphones halve whatever damage actually lands this turn, for the next
+## two turns that land damage - a turn that doesn't hit at all (an enemy
+## guard stance, or a non-damaging skill like Interrupt/Silence) doesn't
+## burn one of those two turns.
+func _consume_guard() -> float:
+	if _guard_turns_left <= 0:
+		return 1.0
+	_guard_turns_left -= 1
+	return 0.5
+
+
+func _enter_guard_stance() -> void:
+	_enemy_guarding = true
+	_say("%s squares up and stops listening. (Guarding - your next line will be fully blocked.)" % String(_enemy["name"]))
+	_tint(enemy_sprite, Color(0.55, 0.75, 1.3), 1.6)
+	_popup("Guarding", false, Color(0.6, 0.75, 1.0))
+
+
 ## Returns true when a signature skill replaced the plain attack this turn.
 func _try_skill() -> bool:
-	var skill := String(_enemy.get("skill", "none"))
+	## Enemies with more than one signature move list them under "skills";
+	## a single-move enemy keeps the older "skill" string field.
+	var skill_pool: Array = _enemy.get("skills", [])
+	var skill := String(skill_pool[randi() % skill_pool.size()]) if not skill_pool.is_empty() else String(_enemy.get("skill", "none"))
 	if skill == "none" or randf() > 0.4:
 		return false
 
@@ -598,9 +669,9 @@ func _try_skill() -> bool:
 
 	match skill:
 		"pile_on":
-			var chip := 10
+			var chip := int(10 * _consume_guard())
 			GameState.add_patience(-chip)
-			GameState.add_anger(ANGER_ON_HIT)
+			GameState.add_energy(ENERGY_ON_HIT)
 			_say("Pile On - another 'small favour' lands on your desk.")
 			_popup("-%d" % chip, false, Color(1.0, 0.6, 0.4))
 		"interrupt":
@@ -610,15 +681,32 @@ func _try_skill() -> bool:
 		"silence":
 			var pool: Array = []
 			for w: Dictionary in GameData.WORDS:
-				pool.append(String(w["id"]))
-			_silenced = String(pool[randi() % pool.size()])
-			_say("Policy Citation - %s is off limits this turn." % GameData.word_by_id(_silenced)["name"])
-			_popup("Silenced", false, Color(0.8, 0.8, 0.9))
+				if GameState.is_word_unlocked(String(w["id"])):
+					pool.append(String(w["id"]))
+			if not pool.is_empty():
+				_silenced = String(pool[randi() % pool.size()])
+				_say("Policy Citation - %s is off limits this turn." % GameData.word_by_id(_silenced)["name"])
+				_popup("Silenced", false, Color(0.8, 0.8, 0.9))
 		"gaslight":
 			var drain := 18
-			GameState.add_anger(-drain)
-			_say("Gaslighting - \"I never said that.\" Your anger wavers.")
-			_popup("-%d Anger" % drain, false, Color(0.85, 0.7, 1.0))
+			GameState.add_energy(-drain)
+			_say("Gaslighting - \"I never said that.\" Your energy wavers.")
+			_popup("-%d Energy" % drain, false, Color(0.85, 0.7, 1.0))
+		"after_hours_ping":
+			var chip := int(12 * _consume_guard())
+			GameState.add_patience(-chip)
+			GameState.add_energy(-8)
+			_say("After-Hours Ping - \"Sorry to bug you at 9pm, quick one!\"")
+			_popup("-%d, -8 Energy" % chip, false, Color(1.0, 0.55, 0.35))
+		"urgent_no_brief":
+			var pool: Array = []
+			for w: Dictionary in GameData.WORDS:
+				if GameState.is_word_unlocked(String(w["id"])):
+					pool.append(String(w["id"]))
+			if not pool.is_empty():
+				_silenced = String(pool[randi() % pool.size()])
+				_say("Urgent, No Brief - \"Need this redone, can't explain why, just vibes.\"")
+				_popup("Silenced", false, Color(0.8, 0.8, 0.9))
 
 	_flash(Color(0.6, 0.4, 0.9), 0.28, 0.35)
 	_refresh()
@@ -634,16 +722,12 @@ func _win() -> void:
 	_flash(Color(1.0, 0.85, 0.3), 0.4, 0.6)
 	var reward := int(_enemy.get("coin_reward", 20))
 	GameState.add_coins(reward)
-	_say("%s has nothing left to say.\n+%d coins" % [String(_enemy["name"]), reward])
-	await get_tree().create_timer(1.8).timeout
+	coin_label.text = "%d coins" % GameState.coins
+	_say(String(_enemy.get("defeat", "%s has nothing left to say." % String(_enemy["name"]))))
+	_show_coin_reward(reward)
+	await get_tree().create_timer(2.2).timeout
 	GameState.advance_stage()
-	## Every win drops the player into the shop to spend the coins they just
-	## earned; the shop's Back button carries on to Promotion. The final win
-	## has no shop - it goes straight to the ending recap.
-	if GameState.stage_index >= GameData.enemy_count():
-		get_tree().change_scene_to_file(PROMOTION)
-	else:
-		get_tree().change_scene_to_file(SHOP)
+	get_tree().change_scene_to_file(PROMOTION)
 
 
 func _lose() -> void:
@@ -652,20 +736,20 @@ func _lose() -> void:
 	_collapse("player")
 	_flash(Color(0.1, 0.1, 0.1), 0.6, 1.2)
 	_say("Your patience is gone. You apologise and go back to your desk.")
-	GameState.delete_save()
+	## No delete_save() here - the last stage-win checkpoint stays on disk so
+	## GameOver's "Continue from Checkpoint" has something to load.
 	await get_tree().create_timer(2.1).timeout
-	get_tree().change_scene_to_file(MAIN_MENU)
+	get_tree().change_scene_to_file(GAME_OVER)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("ui_cancel") or _over:
-		return
-	get_viewport().set_input_as_handled()
-	if _backpack_overlay.visible:
-		_close_backpack()
-		return
-	GameState.save_game()
-	get_tree().change_scene_to_file(MAIN_MENU)
+	if event.is_action_pressed("ui_cancel") and not _over:
+		get_viewport().set_input_as_handled()
+		if _backpack_overlay.visible:
+			_close_backpack()
+			return
+		GameState.save_game()
+		get_tree().change_scene_to_file(MAIN_MENU)
 
 
 # --------------------------------------------------------------------- fx ---
@@ -693,6 +777,35 @@ func _popup(text: String, at_enemy: bool, color: Color) -> void:
 	t.set_parallel(true)
 	t.tween_property(popup_label, "position:y", start_y - 62.0, 0.75)
 	t.tween_property(popup_label, "modulate:a", 0.0, 0.75)
+
+
+## The regular _popup() fades out in 0.75s, which reads as a blink for a
+## reward the player should actually register - this one pops bigger and
+## holds long enough to be seen before the scene changes.
+func _show_coin_reward(reward: int) -> void:
+	if not Settings.show_damage:
+		return
+	var label := Label.new()
+	label.theme_type_variation = &"HeaderLabel"
+	label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	label.add_theme_font_size_override("font_size", 64)
+	label.text = "+%d COINS" % reward
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size = Vector2(500, 90)
+	label.position = Vector2(768.0 - 250.0, 360.0)
+	label.pivot_offset = label.size * 0.5
+	label.scale = Vector2(0.4, 0.4)
+	label.modulate.a = 0.0
+	add_child(label)
+
+	var t := label.create_tween()
+	t.tween_property(label, "modulate:a", 1.0, 0.15)
+	t.parallel().tween_property(label, "scale", Vector2(1.2, 1.2), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(label, "scale", Vector2(1.0, 1.0), 0.15)
+	t.tween_interval(1.2)
+	t.tween_property(label, "modulate:a", 0.0, 0.4)
+	t.tween_callback(label.queue_free)
 
 
 func _tint(sprite: TextureRect, color: Color, duration: float) -> void:

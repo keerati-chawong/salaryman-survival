@@ -99,6 +99,7 @@ var _enemy_fill := StyleBoxFlat.new()
 
 func _ready() -> void:
 	randomize()
+	SoundManager.play_music("battle")
 	_enemy = GameState.current_enemy()
 	_enemy_max = int(_enemy["hp"])
 	_enemy_hp = _enemy_max
@@ -323,11 +324,13 @@ func _build_backpack_slot(id: String, item: Dictionary) -> Control:
 func _open_backpack() -> void:
 	if _busy or _over:
 		return
+	SoundManager.play_sfx("click")
 	_backpack_overlay.visible = true
 	_refresh_backpack()
 
 
 func _close_backpack() -> void:
+	SoundManager.play_sfx("click")
 	_backpack_overlay.visible = false
 	_clear_hint()
 
@@ -468,6 +471,7 @@ func _on_word_pressed(id: String) -> void:
 		_say('"%s"' % String(blocked_lines[randi() % blocked_lines.size()]))
 		_lunge("player", 330.0, -30.0)
 		await get_tree().create_timer(0.22).timeout
+		SoundManager.play_sfx("block")
 		_popup("BLOCKED", true, Color(0.6, 0.75, 1.0))
 		_say("%s saw that coming. Fully blocked - the line doesn't land." % String(_enemy["name"]))
 		await get_tree().create_timer(0.6).timeout
@@ -495,6 +499,7 @@ func _on_word_pressed(id: String) -> void:
 		_popup("IMMUNE", true, GameData.effectiveness_color(mult))
 		_say("%s doesn't even register it." % String(_enemy["name"]))
 	else:
+		SoundManager.play_sfx("player_hit")
 		_popup("-%d %s" % [dealt, label], true, GameData.effectiveness_color(mult))
 		_recoil("enemy", 34.0)
 		if mult >= GameData.CRITICAL_AT:
@@ -512,6 +517,7 @@ func _on_bite_pressed() -> void:
 	if _busy or _over:
 		return
 
+	SoundManager.play_sfx("click")
 	_busy = true
 	_refresh_buttons()
 
@@ -541,6 +547,7 @@ func _on_apologize_pressed() -> void:
 	if not GameState.spend_energy(APOLOGIZE_COST):
 		return
 
+	SoundManager.play_sfx("click")
 	_busy = true
 	_refresh_buttons()
 
@@ -562,6 +569,7 @@ func _on_item_pressed(id: String) -> void:
 	if not GameState.consume_item(id):
 		return
 
+	SoundManager.play_sfx("item_use")
 	_busy = true
 	_refresh_buttons()
 
@@ -612,6 +620,7 @@ func _enemy_turn() -> void:
 
 			var taunts: Array = _enemy["taunts"]
 			_say('"%s"' % String(taunts[randi() % taunts.size()]))
+			SoundManager.play_enemy_voice(String(_enemy["id"]))
 
 			_lunge("enemy", -400.0, -10.0)
 			await get_tree().create_timer(0.22).timeout
@@ -668,6 +677,7 @@ func _try_skill() -> bool:
 	if skill == "none" or randf() > 0.4:
 		return false
 
+	SoundManager.play_enemy_voice(String(_enemy["id"]))
 	_lunge("enemy", -260.0, 0.0)
 	await get_tree().create_timer(0.2).timeout
 
@@ -724,6 +734,7 @@ func _win() -> void:
 	_refresh_buttons()
 	_collapse("enemy")
 	_flash(Color(1.0, 0.85, 0.3), 0.4, 0.6)
+	SoundManager.play_sfx("win")
 	var reward := int(_enemy.get("coin_reward", 20))
 	GameState.add_coins(reward)
 	coin_label.text = "%d coins" % GameState.coins

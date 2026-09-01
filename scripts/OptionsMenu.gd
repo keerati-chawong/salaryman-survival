@@ -105,7 +105,7 @@ func _build_sidebar() -> Control:
 		btn.ignore_texture_size = true
 		btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 		btn.custom_minimum_size = Vector2(0, 76)
-		btn.pressed.connect(_select_tab.bind(id))
+		btn.pressed.connect(_on_tab_pressed.bind(id))
 		col.add_child(btn)
 		_tab_buttons.append(btn)
 
@@ -454,6 +454,11 @@ func _build_others_pane() -> Control:
 
 # ----------------------------------------------------------------- state ----
 
+func _on_tab_pressed(id: String) -> void:
+	SoundManager.play_sfx("click")
+	_select_tab(id)
+
+
 func _select_tab(id: String) -> void:
 	_current = id
 	for i: int in TABS.size():
@@ -552,11 +557,13 @@ func _on_language_selected(idx: int) -> void:
 
 
 func _on_delete_save() -> void:
+	SoundManager.play_sfx("click")
 	GameState.delete_save()
 	_show_toast("Save data deleted")
 
 
 func _on_reset() -> void:
+	SoundManager.play_sfx("click")
 	Settings.reset_defaults()
 	Settings.apply_all()
 	_refresh_from_settings()
@@ -564,12 +571,14 @@ func _on_reset() -> void:
 
 
 func _on_apply() -> void:
+	SoundManager.play_sfx("click")
 	Settings.apply_all()
 	Settings.save_settings()
 	_show_toast("Settings saved")
 
 
 func _go_back() -> void:
+	SoundManager.play_sfx("click")
 	Settings.save_settings()
 	get_tree().change_scene_to_file(MAIN_MENU)
 

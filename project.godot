@@ -23,6 +23,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 Settings="*res://scripts/Settings.gd"
 GameData="*res://scripts/GameData.gd"
 GameState="*res://scripts/GameState.gd"
+SoundManager="*res://scripts/SoundManager.gd"
 
 [display]
 

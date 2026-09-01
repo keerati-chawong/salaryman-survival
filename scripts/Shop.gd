@@ -319,6 +319,7 @@ func _on_buy(id: String) -> void:
 	if GameState.spend_coins(price):
 		GameState.grant_item(id)
 		GameState.save_game()
+		SoundManager.play_sfx("item_use")
 		_message_label.text = "Bought %s for %d coins." % [String(item["name"]), price]
 		_flash_coins("-%d" % price)
 	else:
@@ -326,6 +327,7 @@ func _on_buy(id: String) -> void:
 
 
 func _on_back() -> void:
+	SoundManager.play_sfx("click")
 	get_tree().change_scene_to_file(PROMOTION)
 
 

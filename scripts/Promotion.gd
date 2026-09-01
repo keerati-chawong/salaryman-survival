@@ -70,14 +70,17 @@ func _show_ending() -> void:
 
 
 func _on_continue() -> void:
+	SoundManager.play_sfx("click")
 	if _finished:
 		GameState.start_new_run()
 	get_tree().change_scene_to_file(WORK_PHASE)
 
 func _on_shop() -> void:
+	SoundManager.play_sfx("click")
 	get_tree().change_scene_to_file(SHOP)
 
 func _on_menu() -> void:
+	SoundManager.play_sfx("click")
 	get_tree().change_scene_to_file(MAIN_MENU)
 
 

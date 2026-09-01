@@ -103,6 +103,10 @@ var _target_word := ""
 var _target_category := ""
 var _typed_index := 0
 var _word_mistake := false
+## Consecutive mistyped characters with no correct keystroke in between -
+## resets on any correct key or a new word. Drives which of the escalating
+## mistype_1..4 stings plays (see _register_mistake()).
+var _mistake_streak := 0
 
 var _words_typed := 0
 ## Consecutive words completed with zero mistakes; resets to 0 on any typo.
@@ -130,6 +134,7 @@ var _finished := false
 
 func _ready() -> void:
 	randomize()
+	SoundManager.play_music("workphase")
 	_round_duration = _compute_round_duration()
 	_time_remaining = _round_duration
 	_mistype_penalty = _compute_mistype_penalty()
@@ -192,6 +197,7 @@ func _show_intro() -> void:
 
 
 func _on_intro_start_pressed() -> void:
+	SoundManager.play_sfx("click")
 	Settings.has_seen_workphase_intro = true
 	Settings.save_settings()
 	_begin_round()
@@ -246,6 +252,7 @@ func _start_qte() -> void:
 	qte_panel.visible = true
 	qte_panel.modulate.a = 0.0
 	create_tween().tween_property(qte_panel, "modulate:a", 1.0, 0.1)
+	SoundManager.duck_music()
 
 	_spawn_distraction_label(DISTRACTION_TEXTS[randi() % DISTRACTION_TEXTS.size()])
 
@@ -254,12 +261,15 @@ func _resolve_qte(success: bool) -> void:
 	_qte_active = false
 	qte_panel.visible = false
 	_qte_timer = randf_range(QTE_INTERVAL.x, QTE_INTERVAL.y)
+	SoundManager.unduck_music()
 
 	if success:
 		GameState.add_patience(QTE_SUCCESS_PATIENCE)
+		SoundManager.play_sfx("qte_success")
 		_flash_message("Deflected! +%d Patience" % QTE_SUCCESS_PATIENCE, Color(0.6, 1.0, 0.6))
 	else:
 		GameState.add_patience(-QTE_FAIL_PATIENCE_PENALTY)
+		SoundManager.play_sfx("qte_fail")
 		_hit_feedback(Color(0.9, 0.2, 0.2, 0.4), 10.0)
 		_flash_message("-%d Patience" % QTE_FAIL_PATIENCE_PENALTY, Color(1.0, 0.45, 0.45))
 		_check_burnout()
@@ -322,6 +332,8 @@ func _handle_typed_char(ch: String) -> void:
 		return
 	var expected := _target_word.substr(_typed_index, 1).to_lower()
 	if ch == expected:
+		_mistake_streak = 0
+		SoundManager.play_sfx("typewriter")
 		_typed_index += 1
 		_update_word_display()
 		if _typed_index >= _target_word.length():
@@ -332,6 +344,8 @@ func _handle_typed_char(ch: String) -> void:
 
 func _register_mistake() -> void:
 	_word_mistake = true
+	_mistake_streak += 1
+	SoundManager.play_mistype(_mistake_streak)
 	GameState.add_patience(-_mistype_penalty)
 	_shake_word_label()
 	_hit_feedback(Color(0.9, 0.2, 0.2, 0.22), 5.0)
@@ -354,6 +368,7 @@ func _complete_word() -> void:
 		combo_mult = clampf(1.0 + float(_combo_streak - 1) * COMBO_STEP, 1.0, COMBO_MAX_MULT)
 		energy_gain = int(round(BASE_WORD_ENERGY * combo_mult))
 
+	SoundManager.play_sfx("doc_pickup")
 	GameState.add_energy(energy_gain)
 	GameState.add_coins(COIN_PER_WORD)
 	_word_quota[_target_category] = int(_word_quota.get(_target_category, 0)) + QUOTA_PER_WORD
@@ -379,6 +394,7 @@ func _next_word() -> void:
 	_target_word = _draw_word(category)
 	_typed_index = 0
 	_word_mistake = false
+	_mistake_streak = 0
 
 	category_label.text = String(GameData.word_by_id(category).get("short", category.to_upper()))
 	_update_word_display()
@@ -484,11 +500,9 @@ func _flash_message(text: String, color: Color) -> void:
 
 
 ## Shared by both penalty sources (mistyped character / failed QTE dodge) at
-## different strengths. NOTE: this project has no audio bus/SFX assets wired
-## up anywhere yet (Settings.gd only manages volume, no AudioStreamPlayer
-## exists in any scene) - flash + shake stand in for the "audio cue"
-## requirement until sound assets are added.
+## different strengths.
 func _hit_feedback(color: Color, shake_strength: float) -> void:
+	SoundManager.duck_music_briefly(0.5)
 	flash.color = color
 	create_tween().tween_property(flash, "color:a", 0.0, 0.35)
 	if Settings.screen_shake:

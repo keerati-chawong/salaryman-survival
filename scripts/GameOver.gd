@@ -16,6 +16,7 @@ const WORK_PHASE := "res://scenes/WorkPhase.tscn"
 
 
 func _ready() -> void:
+	SoundManager.play_lose()
 	var enemy := GameState.current_enemy()
 	subtitle.text = "You reached %s - Stage %d, facing %s - before burning out." % [
 		GameState.rank, GameState.stage_index + 1, String(enemy.get("name", "someone")),
@@ -28,16 +29,19 @@ func _ready() -> void:
 
 
 func _on_continue() -> void:
+	SoundManager.play_sfx("click")
 	if GameState.load_game():
 		get_tree().change_scene_to_file(WORK_PHASE)
 
 
 func _on_new_run() -> void:
+	SoundManager.play_sfx("click")
 	GameState.start_new_run()
 	get_tree().change_scene_to_file(WORK_PHASE)
 
 
 func _on_menu() -> void:
+	SoundManager.play_sfx("click")
 	get_tree().change_scene_to_file(MAIN_MENU)
 
 

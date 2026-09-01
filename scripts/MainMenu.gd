@@ -12,6 +12,7 @@ const CREDITS_SCENE := "res://scenes/CreditsMenu.tscn"
 
 
 func _ready() -> void:
+	SoundManager.play_music("menu")
 	button_continue.disabled = not GameState.has_save()
 	_show_progress()
 
@@ -48,18 +49,22 @@ func _on_button_unhover(button: TextureButton) -> void:
 
 
 func _on_button_new_start_pressed() -> void:
+	SoundManager.play_sfx("click")
 	GameState.start_new_run()
 	get_tree().change_scene_to_file(WORK_PHASE)
 
 
 func _on_button_continue_pressed() -> void:
+	SoundManager.play_sfx("click")
 	if GameState.load_game():
 		get_tree().change_scene_to_file(WORK_PHASE)
 
 
 func _on_button_option_pressed() -> void:
+	SoundManager.play_sfx("click")
 	get_tree().change_scene_to_file(OPTIONS_SCENE)
 
 
 func _on_button_credit_pressed() -> void:
+	SoundManager.play_sfx("click")
 	get_tree().change_scene_to_file(CREDITS_SCENE)

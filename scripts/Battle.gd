@@ -4,6 +4,7 @@ extends Control
 
 const MAIN_MENU := "res://scenes/MainMenu.tscn"
 const PROMOTION := "res://scenes/Promotion.tscn"
+const ENDING := "res://scenes/Ending.tscn"
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
 const GAME_OVER := "res://scenes/GameOver.tscn"
 
@@ -731,7 +732,10 @@ func _win() -> void:
 	_show_coin_reward(reward)
 	await get_tree().create_timer(2.2).timeout
 	GameState.advance_stage()
-	get_tree().change_scene_to_file(PROMOTION)
+	if GameState.stage_index >= GameData.enemy_count():
+		get_tree().change_scene_to_file(ENDING)
+	else:
+		get_tree().change_scene_to_file(PROMOTION)
 
 
 func _lose() -> void:

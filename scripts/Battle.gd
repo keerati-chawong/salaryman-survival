@@ -351,17 +351,21 @@ func _refresh_backpack() -> void:
 
 
 ## Hidden until every word is out of uses - the crisis fallback: trade
-## Patience to keep the fight going instead of being locked out entirely.
+## Energy to keep the fight going instead of being locked out entirely.
+## Lives in the word grid (styled like a word button) so it drops into the
+## empty slot next to the unlocked words instead of overflowing ActionPanel.
 func _build_apologize_button() -> void:
 	_apologize_button = Button.new()
-	_apologize_button.text = "Apologize  (-%d Energy, +%d uses each)" % [APOLOGIZE_COST, APOLOGIZE_BONUS_USES]
-	_apologize_button.custom_minimum_size = bite_button.custom_minimum_size
+	_apologize_button.text = "APOLOGIZE\n-%d Energy" % APOLOGIZE_COST
+	_apologize_button.custom_minimum_size = Vector2(0, 74)
 	_apologize_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apologize_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_apologize_button.add_theme_color_override("font_color", Color(0.95, 0.78, 0.5))
 	_apologize_button.visible = false
 	_apologize_button.pressed.connect(_on_apologize_pressed)
-	_apologize_button.mouse_entered.connect(_show_hint.bind("Only appears when every word is out of uses. Costly, but keeps you in the fight."))
+	_apologize_button.mouse_entered.connect(_show_hint.bind("Only appears when every word is out of uses. Costs %d Energy for +%d uses on every word - keeps you in the fight." % [APOLOGIZE_COST, APOLOGIZE_BONUS_USES]))
 	_apologize_button.mouse_exited.connect(_clear_hint)
-	bite_button.get_parent().add_child(_apologize_button)
+	word_grid.add_child(_apologize_button)
 
 
 func _show_hint(text: String) -> void:

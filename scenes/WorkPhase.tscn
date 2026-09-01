@@ -120,7 +120,7 @@ show_percentage = false
 [node name="PatienceValue" type="Label" parent="HUD/Stats/PatienceRow" unique_id=1361497546]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-theme_type_variation = &"StatLabel"
+theme_type_variation = &"NumberLabel"
 text = "220 / 220"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -148,7 +148,7 @@ show_percentage = false
 [node name="EnergyValue" type="Label" parent="HUD/Stats/EnergyRow" unique_id=1034747031]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-theme_type_variation = &"StatLabel"
+theme_type_variation = &"NumberLabel"
 text = "0 / 100"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -177,7 +177,7 @@ show_percentage = false
 [node name="TimerValue" type="Label" parent="HUD/Stats/TimerRow" unique_id=1058860309]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-theme_type_variation = &"StatLabel"
+theme_type_variation = &"NumberLabel"
 text = "40s"
 horizontal_alignment = 2
 vertical_alignment = 1

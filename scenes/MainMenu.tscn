@@ -54,28 +54,6 @@ texture_hover = ExtResource("5_nsh")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="LabelPatch" type="ColorRect" parent="ButtonNewStart" unique_id=2028641117]
-layout_mode = 0
-offset_left = 150.0
-offset_top = 25.0
-offset_right = 470.0
-offset_bottom = 83.0
-mouse_filter = 2
-color = Color(0.1804, 0.1922, 0.2078, 1)
-
-[node name="Label" type="Label" parent="ButtonNewStart" unique_id=2028641118]
-layout_mode = 0
-offset_left = 142.0
-offset_top = 23.0
-offset_right = 462.0
-offset_bottom = 81.0
-theme_type_variation = &"HeaderLabel"
-theme_override_colors/font_color = Color(0.965, 0.965, 0.97, 1)
-theme_override_font_sizes/font_size = 30
-text = "NEW GAME"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="ButtonContinue" type="TextureButton" parent="." unique_id=990144044]
 layout_mode = 0
 offset_left = 488.0

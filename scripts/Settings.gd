@@ -26,6 +26,7 @@ const BASE_FONT_SIZES := {
 	"StatLabel": 22,
 	"BigStatLabel": 26,
 	"HeaderLabel": 28,
+	"NumberLabel": 22,
 }
 
 signal changed
@@ -79,7 +80,7 @@ func _ensure_buses() -> void:
 
 
 func _ensure_theme_variations() -> void:
-	for variation: String in ["SmallLabel", "StatLabel", "BigStatLabel", "HeaderLabel"]:
+	for variation: String in ["SmallLabel", "StatLabel", "BigStatLabel", "HeaderLabel", "NumberLabel"]:
 		THEME.set_type_variation(variation, "Label")
 
 

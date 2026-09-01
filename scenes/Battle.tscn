@@ -120,7 +120,8 @@ show_percentage = false
 [node name="EnemyHPLabel" type="Label" parent="EnemyPanel/Rows/BarRow" unique_id=1753728757]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
-theme_type_variation = &"BigStatLabel"
+theme_type_variation = &"NumberLabel"
+theme_override_font_sizes/font_size = 26
 text = "240 / 240"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -166,7 +167,7 @@ show_percentage = false
 [node name="PatienceLabel" type="Label" parent="PlayerPanel/Cols/Bars/HPRow" unique_id=2133767051]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-theme_type_variation = &"StatLabel"
+theme_type_variation = &"NumberLabel"
 text = "220 / 220"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -195,7 +196,7 @@ show_percentage = false
 [node name="EnergyLabel" type="Label" parent="PlayerPanel/Cols/Bars/MPRow" unique_id=1827049622]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-theme_type_variation = &"StatLabel"
+theme_type_variation = &"NumberLabel"
 text = "0 / 100"
 horizontal_alignment = 2
 vertical_alignment = 1

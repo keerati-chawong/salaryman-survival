@@ -1,6 +1,7 @@
 extends Control
 
 const WORK_PHASE := "res://scenes/WorkPhase.tscn"
+const INTRO_SCENE := "res://scenes/Intro.tscn"
 const OPTIONS_SCENE := "res://scenes/OptionsMenu.tscn"
 const CREDITS_SCENE := "res://scenes/CreditsMenu.tscn"
 
@@ -51,7 +52,7 @@ func _on_button_unhover(button: TextureButton) -> void:
 func _on_button_new_start_pressed() -> void:
 	SoundManager.play_sfx("click")
 	GameState.start_new_run()
-	get_tree().change_scene_to_file(WORK_PHASE)
+	get_tree().change_scene_to_file(INTRO_SCENE)
 
 
 func _on_button_continue_pressed() -> void:

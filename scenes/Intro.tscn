@@ -1,11 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://bh13ehtgkuip5"]
 
-[ext_resource type="Script" path="res://scripts/Intro.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/intro/intro_graduation.png" id="2_graduation"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/intro/intro_job_offer.png" id="3_offer"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/intro/intro_first_jobber.png" id="4_jobber"]
+[ext_resource type="Script" uid="uid://dy623exj6ln4o" path="res://scripts/Intro.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dfgdds1rb7as2" path="res://assets/backgrounds/intro/intro_graduation.png" id="2_graduation"]
+[ext_resource type="Texture2D" uid="uid://bx4nc2xxj7mu6" path="res://assets/backgrounds/intro/intro_job_offer.png" id="3_offer"]
+[ext_resource type="Texture2D" uid="uid://c4do1p20ve4pq" path="res://assets/backgrounds/intro/intro_first_jobber.png" id="4_jobber"]
 
-[node name="Intro" type="Control"]
+[node name="Intro" type="Control" unique_id=66278440]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -14,7 +14,8 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="SceneFrame" type="Control" parent="."]
+[node name="SceneFrame" type="Control" parent="." unique_id=467774148]
+clip_contents = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -22,9 +23,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-clip_contents = true
 
-[node name="Graduation" type="TextureRect" parent="SceneFrame"]
+[node name="Graduation" type="TextureRect" parent="SceneFrame" unique_id=1133465980]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -36,7 +36,7 @@ texture = ExtResource("2_graduation")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="JobOffer" type="TextureRect" parent="SceneFrame"]
+[node name="JobOffer" type="TextureRect" parent="SceneFrame" unique_id=1713993606]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,41 +48,44 @@ texture = ExtResource("3_offer")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="FirstJobber" type="TextureRect" parent="SceneFrame"]
+[node name="FirstJobber" type="TextureRect" parent="SceneFrame" unique_id=1729807204]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 pivot_offset = Vector2(955, 350)
+mouse_filter = 2
 texture = ExtResource("4_jobber")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="TopShade" type="ColorRect" parent="."]
+[node name="TopShade" type="ColorRect" parent="." unique_id=1723143528]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 350.0
+offset_top = 686.0
+offset_bottom = 1036.0
 grow_horizontal = 2
+size_flags_vertical = 8
 mouse_filter = 2
 color = Color(0.015, 0.025, 0.055, 0.7)
 
-[node name="NarrationPanel" type="VBoxContainer" parent="."]
+[node name="NarrationPanel" type="VBoxContainer" parent="." unique_id=801950635]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 110.0
-offset_top = 46.0
+offset_top = 732.0
 offset_right = -110.0
-offset_bottom = 315.0
+offset_bottom = 1001.0
 grow_horizontal = 2
-theme_override_constants/separation = 16
+size_flags_vertical = 8
 mouse_filter = 2
+theme_override_constants/separation = 16
 
-[node name="Chapter" type="Label" parent="NarrationPanel"]
+[node name="Chapter" type="Label" parent="NarrationPanel" unique_id=1590333509]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.84, 0.44, 1)
 theme_override_colors/font_outline_color = Color(0.015, 0.02, 0.04, 0.95)
@@ -90,7 +93,7 @@ theme_override_constants/outline_size = 7
 theme_override_font_sizes/font_size = 27
 horizontal_alignment = 1
 
-[node name="Narration" type="Label" parent="NarrationPanel"]
+[node name="Narration" type="Label" parent="NarrationPanel" unique_id=25245318]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.015, 0.02, 0.04, 0.95)
@@ -99,7 +102,7 @@ theme_override_font_sizes/font_size = 36
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Vignette" type="ColorRect" parent="."]
+[node name="Vignette" type="ColorRect" parent="." unique_id=1947039750]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -109,7 +112,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.08)
 
-[node name="ContinueHint" type="Label" parent="."]
+[node name="ContinueHint" type="Label" parent="." unique_id=1735761484]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0

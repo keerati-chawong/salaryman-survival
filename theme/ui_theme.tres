@@ -107,6 +107,10 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
+[sub_resource type="SystemFont" id="num_font"]
+font_names = PackedStringArray("Segoe UI", "Roboto", "DejaVu Sans", "Helvetica Neue", "Arial", "sans-serif")
+font_weight = 600
+
 [sub_resource type="StyleBoxFlat" id="opt_hover"]
 content_margin_left = 12.0
 content_margin_top = 7.0
@@ -213,11 +217,6 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
-[sub_resource type="SystemFont" id="num_font"]
-font_names = PackedStringArray("Segoe UI", "Roboto", "DejaVu Sans", "Helvetica Neue", "Arial", "sans-serif")
-font_weight = 600
-subpixel_positioning = 1
-
 [resource]
 default_font = ExtResource("1_pixel_font")
 default_font_size = 18
@@ -241,21 +240,21 @@ HSlider/styles/grabber_area = SubResource("slider_fill")
 HSlider/styles/grabber_area_highlight = SubResource("slider_fill")
 HSlider/styles/slider = SubResource("slider_bg")
 HeaderLabel/base_type = &"Label"
-HeaderLabel/fonts/font = ExtResource("1_pixel_font")
 HeaderLabel/colors/font_color = Color(1, 0.93, 0.72, 1)
 HeaderLabel/colors/font_outline_color = Color(0, 0, 0, 0.85)
 HeaderLabel/constants/outline_size = 2
 HeaderLabel/font_sizes/font_size = 28
+HeaderLabel/fonts/font = ExtResource("1_pixel_font")
 Label/colors/font_color = Color(0.9, 0.91, 0.93, 1)
 Label/colors/font_outline_color = Color(0, 0, 0, 0.85)
 Label/constants/outline_size = 4
 Label/font_sizes/font_size = 18
 NumberLabel/base_type = &"Label"
-NumberLabel/fonts/font = SubResource("num_font")
 NumberLabel/colors/font_color = Color(0.96, 0.97, 0.99, 1)
 NumberLabel/colors/font_outline_color = Color(0, 0, 0, 0.8)
 NumberLabel/constants/outline_size = 1
 NumberLabel/font_sizes/font_size = 22
+NumberLabel/fonts/font = SubResource("num_font")
 OptionButton/colors/font_color = Color(0.94, 0.95, 0.96, 1)
 OptionButton/colors/font_disabled_color = Color(0.45, 0.45, 0.48, 1)
 OptionButton/colors/font_hover_color = Color(1, 0.9, 0.6, 1)

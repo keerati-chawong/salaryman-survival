@@ -98,13 +98,20 @@ var _duck_count := 0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
+	## Every player is forced to PLAYBACK_TYPE_STREAM - the engine default
+	## (PLAYBACK_TYPE_SAMPLE on Web) silently produces zero PCM data on a
+	## single-threaded Web export (this project's thread_support=false), so
+	## every AudioStreamPlayer here "plays" with the graph fully wired but
+	## dead silent. Stream mode has higher latency but actually works.
 	_music_player = AudioStreamPlayer.new()
 	_music_player.bus = "Music"
+	_music_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_music_player)
 
 	for i: int in SFX_POOL_SIZE:
 		var p := AudioStreamPlayer.new()
 		p.bus = "SFX"
+		p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		add_child(p)
 		_sfx_players.append(p)
 
@@ -113,6 +120,7 @@ func _ready() -> void:
 	## after play_lose() silences everything else.
 	_lose_player = AudioStreamPlayer.new()
 	_lose_player.bus = "SFX"
+	_lose_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_lose_player)
 
 

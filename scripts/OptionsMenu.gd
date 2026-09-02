@@ -287,6 +287,8 @@ var _music_slider: HSlider
 var _music_value: Label
 var _sfx_slider: HSlider
 var _sfx_value: Label
+var _music_mute_check: CheckButton
+var _sfx_mute_check: CheckButton
 var _difficulty_opt: OptionButton
 var _shake_check: CheckButton
 var _damage_check: CheckButton
@@ -365,7 +367,13 @@ func _build_audio_pane() -> Control:
 	_sfx_value = s[1]
 	_sfx_slider.value_changed.connect(_on_sfx_changed)
 
-	pane.add_child(_note("Volume changes apply immediately and are shared by every scene."))
+	_music_mute_check = _add_check(grid, "Mute Music")
+	_music_mute_check.toggled.connect(_on_music_mute_toggled)
+
+	_sfx_mute_check = _add_check(grid, "Mute Sound")
+	_sfx_mute_check.toggled.connect(_on_sfx_mute_toggled)
+
+	pane.add_child(_note("Volume changes apply immediately and are shared by every scene. Mute keeps your slider levels - toggling it back on restores them."))
 	return pane
 
 
@@ -493,6 +501,8 @@ func _refresh_from_settings() -> void:
 	_master_value.text = "%d%%" % int(Settings.master_volume)
 	_music_value.text = "%d%%" % int(Settings.music_volume)
 	_sfx_value.text = "%d%%" % int(Settings.sfx_volume)
+	_music_mute_check.button_pressed = Settings.music_muted
+	_sfx_mute_check.button_pressed = Settings.sfx_muted
 	_scale_value.text = "%d%%" % int(Settings.ui_scale)
 
 
@@ -528,6 +538,16 @@ func _on_sfx_changed(v: float) -> void:
 	Settings.sfx_volume = v
 	Settings.apply_audio()
 	_sfx_value.text = "%d%%" % int(v)
+
+
+func _on_music_mute_toggled(on: bool) -> void:
+	Settings.music_muted = on
+	Settings.apply_audio()
+
+
+func _on_sfx_mute_toggled(on: bool) -> void:
+	Settings.sfx_muted = on
+	Settings.apply_audio()
 
 
 func _on_ui_scale_changed(v: float) -> void:

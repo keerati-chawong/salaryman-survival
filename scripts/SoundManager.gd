@@ -17,6 +17,14 @@ const MUSIC := {
 	"ending": preload("res://assets/audio/music/ending.mp3"),
 }
 
+## Per-track loudness tweak (dB, relative to the shared "Music" bus level) -
+## lets one track sit louder/quieter than the rest without re-mastering the
+## audio file itself. WorkPhase's track was mixed quieter than the others,
+## so it gets a boost here. 0.0 (the default via .get()) leaves a track alone.
+const MUSIC_VOLUME_OFFSET_DB := {
+	"workphase": 6.0,
+}
+
 ## Every key holds an Array of AudioStream so play_sfx() can pick a random
 ## take - a little variety for lines that repeat a lot (clicks, voice barks).
 const SFX := {
@@ -83,6 +91,7 @@ var _sfx_players: Array[AudioStreamPlayer] = []
 var _sfx_next := 0
 var _lose_player: AudioStreamPlayer
 var _current_music := ""
+var _current_offset_db := 0.0
 var _duck_count := 0
 
 
@@ -120,6 +129,7 @@ func play_music(key: String, fade: float = MUSIC_FADE, loop: bool = true) -> voi
 	if stream == null:
 		return
 	_current_music = key
+	_current_offset_db = float(MUSIC_VOLUME_OFFSET_DB.get(key, 0.0))
 	stream.loop = loop
 
 	if _music_player.playing:
@@ -134,7 +144,7 @@ func _start_music(stream: AudioStream, fade: float) -> void:
 	_music_player.stream = stream
 	_music_player.volume_db = -40.0
 	_music_player.play()
-	var target := DUCK_DB if _duck_count > 0 else 0.0
+	var target := (DUCK_DB if _duck_count > 0 else 0.0) + _current_offset_db
 	create_tween().tween_property(_music_player, "volume_db", target, fade * 0.5)
 
 
@@ -163,7 +173,7 @@ func duck_music_briefly(duration: float = 0.5) -> void:
 
 
 func _apply_duck() -> void:
-	var target := DUCK_DB if _duck_count > 0 else 0.0
+	var target := (DUCK_DB if _duck_count > 0 else 0.0) + _current_offset_db
 	create_tween().tween_property(_music_player, "volume_db", target, 0.25)
 
 

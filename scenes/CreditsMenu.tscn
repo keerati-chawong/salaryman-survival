@@ -1,22 +1,25 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://b828co5gu3gji"]
 
-[ext_resource type="Script" path="res://scripts/SceneNav.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/credits_scene.png" id="2_bg"]
+[ext_resource type="Script" uid="uid://c4aqxlhvcc2bb" path="res://scripts/SceneNav.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://b411u7ig5tuyt" path="res://assets/backgrounds/credits_scene.png" id="2_bg"]
 
-[node name="CreditsMenu" type="Control"]
+[node name="CreditsMenu" type="Control" unique_id=1972502550]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_script")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=1020525790]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 texture = ExtResource("2_bg")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BackButton" type="Button" parent="."]
+[node name="BackButton" type="Button" parent="." unique_id=2083389579]
 self_modulate = Color(1, 1, 1, 0)
+layout_mode = 0
 offset_left = 78.0
 offset_top = 868.0
 offset_right = 285.0

@@ -36,6 +36,8 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_script")
 
 [node name="Background" type="TextureRect" parent="." unique_id=891753822]
@@ -142,7 +144,6 @@ custom_minimum_size = Vector2(360, 28)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/fill = SubResource("energy_fill")
-max_value = 100.0
 show_percentage = false
 
 [node name="EnergyValue" type="Label" parent="HUD/Stats/EnergyRow" unique_id=1034747031]
@@ -182,17 +183,6 @@ text = "40s"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="BackHint" type="Label" parent="HUD" unique_id=1923400413]
-layout_mode = 0
-offset_left = 1180.0
-offset_top = 34.0
-offset_right = 1488.0
-offset_bottom = 64.0
-theme_type_variation = &"SmallLabel"
-theme_override_colors/font_color = Color(0.7, 0.73, 0.78, 1)
-text = "Esc - back to menu"
-horizontal_alignment = 2
-
 [node name="TypingPanel" type="PanelContainer" parent="." unique_id=1290654800]
 layout_mode = 0
 offset_left = 468.0
@@ -208,24 +198,24 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
-horizontal_alignment = 1
 text = "POLITE"
+horizontal_alignment = 1
 
 [node name="WordLabel" type="RichTextLabel" parent="TypingPanel/Rows" unique_id=450158372]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
+theme_override_font_sizes/normal_font_size = 40
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
-theme_override_font_sizes/normal_font_size = 40
 
 [node name="ComboLabel" type="Label" parent="TypingPanel/Rows" unique_id=450158373]
 layout_mode = 2
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.6, 0.85, 0.6, 1)
-horizontal_alignment = 1
 text = "Words typed: 0"
+horizontal_alignment = 1
 
 [node name="QtePanel" type="PanelContainer" parent="." unique_id=1290654854]
 visible = false
@@ -300,8 +290,8 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"StatLabel"
 theme_override_colors/font_color = Color(0.86, 0.88, 0.92, 1)
-autowrap_mode = 3
 text = "Loading..."
+autowrap_mode = 3
 
 [node name="StartButton" type="Button" parent="IntroOverlay/Panel/Rows" unique_id=1290654906]
 custom_minimum_size = Vector2(0, 52)
@@ -313,6 +303,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0)
 metadata/_edit_lock_ = true

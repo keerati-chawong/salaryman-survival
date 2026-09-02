@@ -47,6 +47,7 @@ var _bag_owned: Dictionary = {}
 
 
 func _ready() -> void:
+	SoundManager.play_music("menu")
 	GameState.stats_changed.connect(_refresh)
 	_build_hotspots()
 	_build_hud()

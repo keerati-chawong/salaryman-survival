@@ -69,6 +69,10 @@ const DISTRACTION_TEXTS := [
 ## Distraction pop-ups drift across the screen well after their QTE window
 ## closes, so they're a lingering visual instead of a blink-and-miss-it.
 const DISTRACTION_FLOAT_DURATION := 4.5
+## Bigger than the rest of the HUD (StatLabel is 22) so a flying insult
+## actually reads as shouted, not just another status label. Scaled by
+## Settings.ui_scale like every other theme size - see _spawn_distraction_label().
+const DISTRACTION_FONT_SIZE := 38
 
 @onready var distraction_layer: Control = $DistractionLayer
 @onready var objective_label: Label = $HUD/Objective
@@ -130,6 +134,8 @@ var _qte_keycode: int = KEY_SPACE
 
 var _intro_visible := true
 var _finished := false
+var _paused := false
+var _pause: PauseOverlay
 
 
 func _ready() -> void:
@@ -144,6 +150,9 @@ func _ready() -> void:
 
 	_word_pool = _build_word_pool()
 	_qte_timer = randf_range(QTE_INTERVAL.x, QTE_INTERVAL.y)
+
+	_pause = PauseOverlay.attach(self, _quit_to_menu)
+	_pause.state_changed.connect(_on_pause_state_changed)
 
 	var focus_short := String(GameData.word_by_id(_word_pool[0]).get("short", _word_pool[0].to_upper()))
 	objective_label.text = "Shift %d - Testing: %s" % [GameState.stage_index + 1, focus_short]
@@ -210,10 +219,14 @@ func _begin_round() -> void:
 
 
 func _process(delta: float) -> void:
-	if _finished or _intro_visible:
+	if _finished or _intro_visible or _paused:
 		return
 	_tick_timer(delta)
 	_tick_qte(delta)
+
+
+func _on_pause_state_changed(is_open: bool) -> void:
+	_paused = is_open
 
 
 func _tick_timer(delta: float) -> void:
@@ -282,6 +295,7 @@ func _spawn_distraction_label(text: String) -> void:
 	label.text = text
 	label.theme_type_variation = &"StatLabel"
 	label.add_theme_color_override("font_color", Color(0.95, 0.45, 0.45))
+	label.add_theme_font_size_override("font_size", int(round(DISTRACTION_FONT_SIZE * Settings.ui_scale / 100.0)))
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var from_left := randf() < 0.5
@@ -300,10 +314,10 @@ func _spawn_distraction_label(text: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		_quit_to_menu()
+		_pause.toggle()
 		return
 
-	if _finished or _intro_visible:
+	if _finished or _intro_visible or _paused:
 		return
 
 	var key := event as InputEventKey

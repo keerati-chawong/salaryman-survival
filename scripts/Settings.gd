@@ -39,6 +39,11 @@ var brightness := 75.0
 var master_volume := 80.0
 var music_volume := 60.0
 var sfx_volume := 80.0
+## Quick mute toggles (PauseOverlay's Music/Sound buttons) - kept separate
+## from the volume sliders above so muting and un-muting restores the exact
+## slider value instead of clobbering it.
+var music_muted := false
+var sfx_muted := false
 var screen_shake := true
 var show_damage := true
 var tutorial_tips := true
@@ -106,8 +111,8 @@ func apply_all() -> void:
 
 func apply_audio() -> void:
 	_set_bus_volume("Master", master_volume)
-	_set_bus_volume("Music", music_volume)
-	_set_bus_volume("SFX", sfx_volume)
+	_set_bus_volume("Music", 0.0 if music_muted else music_volume)
+	_set_bus_volume("SFX", 0.0 if sfx_muted else sfx_volume)
 
 
 func _set_bus_volume(bus_name: String, percent: float) -> void:
@@ -176,6 +181,8 @@ func reset_defaults() -> void:
 	master_volume = 80.0
 	music_volume = 60.0
 	sfx_volume = 80.0
+	music_muted = false
+	sfx_muted = false
 	screen_shake = true
 	show_damage = true
 	tutorial_tips = true
@@ -193,6 +200,8 @@ func save_settings() -> void:
 	cfg.set_value("audio", "master", master_volume)
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
+	cfg.set_value("audio", "music_muted", music_muted)
+	cfg.set_value("audio", "sfx_muted", sfx_muted)
 	cfg.set_value("gameplay", "screen_shake", screen_shake)
 	cfg.set_value("gameplay", "show_damage", show_damage)
 	cfg.set_value("gameplay", "tutorial_tips", tutorial_tips)
@@ -214,6 +223,8 @@ func load_settings() -> void:
 	master_volume = cfg.get_value("audio", "master", master_volume)
 	music_volume = cfg.get_value("audio", "music", music_volume)
 	sfx_volume = cfg.get_value("audio", "sfx", sfx_volume)
+	music_muted = cfg.get_value("audio", "music_muted", music_muted)
+	sfx_muted = cfg.get_value("audio", "sfx_muted", sfx_muted)
 	screen_shake = cfg.get_value("gameplay", "screen_shake", screen_shake)
 	show_damage = cfg.get_value("gameplay", "show_damage", show_damage)
 	tutorial_tips = cfg.get_value("gameplay", "tutorial_tips", tutorial_tips)

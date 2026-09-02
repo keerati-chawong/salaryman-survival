@@ -24,7 +24,6 @@ Settings="*res://scripts/Settings.gd"
 GameData="*res://scripts/GameData.gd"
 GameState="*res://scripts/GameState.gd"
 SoundManager="*res://scripts/SoundManager.gd"
-DebugAudioTest="*res://scripts/_DebugAudioTest.gd"
 
 [display]
 

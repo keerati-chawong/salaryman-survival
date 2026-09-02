@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://h5a0wsmst4mr"
-path="res://.godot/imported/hr.png-0365aca02a7fd40d47b78b917d1bfa42.ctex"
+uid="uid://dhk6g1s7f577m"
+path="res://.godot/imported/ceo.png-3652ac9be8e5caf9f72aa7e69c83cd9c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/enemies/hr.png"
-dest_files=["res://.godot/imported/hr.png-0365aca02a7fd40d47b78b917d1bfa42.ctex"]
+source_file="res://assets/characters/oldcharacter/ceo.png"
+dest_files=["res://.godot/imported/ceo.png-3652ac9be8e5caf9f72aa7e69c83cd9c.ctex"]
 
 [params]
 

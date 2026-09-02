@@ -20,6 +20,11 @@ var _finished := false
 
 
 func _ready() -> void:
+	## Otherwise this recap screen just keeps whatever track Battle left
+	## playing, which is the tense combat theme - swap to the calmer menu
+	## track now that the fight is actually over.
+	SoundManager.play_music("menu")
+
 	# advance_stage() already ran, so stage_index points at the next opponent.
 	_finished = GameState.stage_index >= GameData.enemy_count()
 

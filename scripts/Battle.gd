@@ -98,6 +98,8 @@ var _backpack_hint_label: Label
 ## id -> {"btn": Button, "icon": TextureRect, "count": Label}
 var _backpack_slots: Dictionary = {}
 
+var _pause: PauseOverlay
+
 var _player_home: Vector2
 var _enemy_home: Vector2
 var _player_shadow_home: Vector2
@@ -130,6 +132,8 @@ func _ready() -> void:
 	bite_button.mouse_exited.connect(_clear_hint)
 	_setup_sprites()
 	_refresh(true)
+
+	_pause = PauseOverlay.attach(self, _quit_to_menu)
 
 	_say("%s\n%s" % [String(_enemy["intro"]), "Pick your words carefully."])
 
@@ -667,7 +671,7 @@ func _enemy_turn() -> void:
 			_say('"%s"' % String(taunts[randi() % taunts.size()]))
 			SoundManager.play_enemy_voice(String(_enemy["id"]))
 
-			_lunge("enemy", -400.0, -10.0)
+			_lunge("enemy", -400.0, 30.0)
 			await get_tree().create_timer(0.22).timeout
 
 			GameState.add_patience(-dmg)
@@ -747,7 +751,7 @@ func _try_skill() -> bool:
 		return false
 
 	SoundManager.play_enemy_voice(String(_enemy["id"]))
-	_lunge("enemy", -260.0, 0.0)
+	_lunge("enemy", -260.0, 20.0)
 	await get_tree().create_timer(0.2).timeout
 
 	match skill:
@@ -843,8 +847,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _backpack_overlay.visible:
 			_close_backpack()
 			return
-		GameState.save_game()
-		get_tree().change_scene_to_file(MAIN_MENU)
+		_pause.toggle()
+
+
+func _quit_to_menu() -> void:
+	GameState.save_game()
+	get_tree().change_scene_to_file(MAIN_MENU)
 
 
 # --------------------------------------------------------------------- fx ---

@@ -277,21 +277,6 @@ text = "Pick your words carefully."
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="TopBar" type="HBoxContainer" parent="." unique_id=14356183]
-layout_mode = 0
-offset_left = 910.0
-offset_top = 26.0
-offset_right = 1504.0
-offset_bottom = 74.0
-alignment = 2
-
-[node name="BackHint" type="Label" parent="TopBar" unique_id=874750507]
-layout_mode = 2
-theme_type_variation = &"SmallLabel"
-theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
-text = "Esc or Menu (top-right) - pause"
-vertical_alignment = 1
-
 [node name="DamagePopup" type="Label" parent="." unique_id=104471779]
 modulate = Color(1, 1, 1, 0)
 layout_mode = 0

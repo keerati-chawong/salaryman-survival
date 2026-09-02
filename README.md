@@ -1,77 +1,61 @@
 # Salaryman Survival
 
-A pixel-art office-survival RPG prototype. Survive the office, get paid, stay alive.
+A pixel-art office-survival RPG. Survive the office, get paid, stay alive.
 
 **Play it now:** https://keerati-chawong.github.io/salaryman-survival/
 
-## About
+## What is this game?
 
-You're a first jobber grinding through the corporate ladder. Each shift you type
-your way through a chaotic open office to build up Energy and Coins, then face
-your manager (or HR, or the CEO) in a turn-based war of words — pick the right
-kind of comeback for their weaknesses, or get worn down by theirs.
+You're a fresh graduate starting your first job — and it's exactly as brutal
+as everyone warned you. Every shift, you have to survive the open office
+(typing your way through the chaos) and then survive your manager
+(a turn-based war of words). Climb the ranks from Intern to Director by
+outlasting five bosses, each nastier than the last: The Rookie, The
+Work-Dodger, The Team Lead, HR Compliance, and finally the CEO.
 
-Beat every rank on the ladder — Rookie, Work-Dodger, Team Lead, HR Compliance,
-and finally the CEO — to win the run.
+## The loop
 
-## How to play
+Each round of the game has three parts:
 
-**Work Phase** — a top-down typing minigame. Type the target word exactly to
-earn Energy and Coins; a clean, mistake-free word builds a Combo that
-multiplies your payout. Dodge periodic "distraction" pop-ups with a quick
-reflex key (Space/Alt/Ctrl/Enter) before they cost you Patience. Survive the
-clock to head into the confrontation.
+**1. The Office (typing)**
+A shift at your desk. Type the word shown on screen, exactly, to earn Energy
+and Coins — type it perfectly with no mistakes and you build a Combo that
+pays out even more. Every mistyped letter costs you Patience, so don't
+rush and slip. Every so often an "insult" flies across the screen demanding a
+quick reflex key (Space, Alt, Ctrl, or Enter) — react in time and you get a
+bit of Patience back; miss it and you lose some. Survive the clock and you're
+sent in to face your manager.
 
-**Battle** — a turn-based fight. Spend Energy on one of four word-attack
-types — Corporate Jargon, Direct Insult, Passive-Aggressive, or Logic & Facts —
-each strong or weak against a given opponent, shown on the Promotion screen's
-weakness chart before every fight. Use snacks and drinks from the Shop to heal,
-recharge, or buff yourself mid-fight. Run out of Patience and the shift ends.
+**2. The Confrontation (battle)**
+A turn-based showdown against whoever's running your department this stage.
+You fight back with four styles of comeback — Corporate Jargon, a Direct
+Insult, Passive-Aggressive digs, and Logic & Facts — spending the Energy you
+built up in the office to use them. Every opponent has their own weaknesses
+and resistances (check the recap screen before each fight to see which style
+works best), so picking the right words matters more than just attacking.
+If you run out of ways to keep going, you can always bite your tongue for a
+little free Energy, or grab a snack from your bag. Run out of Patience and
+the shift ends — badly.
 
-**Shop** — spend coins earned from typing and winning fights at the office
-vending machine for consumables, or buy Noise-Cancelling Headphones for a
-damage-reducing buff you can't get anywhere else.
+**3. Between Shifts (shop and promotion)**
+Win the fight and you're promoted, with a look at your next opponent's
+weaknesses before you head back to the office. Spend the coins you've earned
+at the vending machine on snacks and drinks — bananas, coffee, energy bars,
+sandwiches, and more — each with its own effect for your next fight, from a
+quick damage boost to extra healing to reduced incoming damage. Noise-
+Cancelling Headphones are the one item you can only get here, and they're
+worth saving up for.
 
-### Controls
+Beat the CEO and you win the run.
 
-| Action | Key |
+## Controls
+
+| Action | How |
 |---|---|
-| Move (Work Phase) | WASD / Arrow keys |
-| Dodge a distraction | Space, Alt, Ctrl, or Enter (as prompted) |
-| Confirm / select | Enter, Space, or Left Click |
-| Pause / menu | Esc, or the Menu button (top-right) |
+| Type the target word | Just type it on your keyboard |
+| Dodge a flying insult | Press the key it shows you (Space, Alt, Ctrl, or Enter) |
+| Confirm / select a button | Enter, Space, or click |
+| Pause | Esc, or the Menu button in the top-right corner |
 
-## Tech
-
-Built in [Godot 4.7](https://godotengine.org) (GDScript, GL Compatibility
-renderer), exported to WebAssembly for the browser build.
-
-## Running it locally
-
-Open the project folder in Godot 4.7+ and press Play, or open
-`scenes/MainMenu.tscn` directly and run that scene.
-
-### Building the web export
-
-The live build is published from `docs/` on the `master` branch:
-
-```
-godot --headless --export-release "Web" docs/index.html
-```
-
-Commit the regenerated `docs/` output after any gameplay change intended for
-the live build.
-
-## Project structure
-
-```
-scenes/     Godot scenes - one per screen (MainMenu, WorkPhase, Battle, ...)
-scripts/    GDScript - per-scene logic plus shared autoload singletons
-theme/      Shared UI theme resource
-assets/     Sprites, backgrounds, fonts, and audio
-docs/       The exported web build (served via GitHub Pages)
-```
-
-Screen flow is a simple state machine (`get_tree().change_scene_to_file`), with
-run state, design data, settings, and audio shared through autoload
-singletons (`GameState`, `GameData`, `Settings`, `SoundManager`).
+That's it — no movement, no aiming. Everything comes down to typing cleanly
+and picking the right words at the right time.

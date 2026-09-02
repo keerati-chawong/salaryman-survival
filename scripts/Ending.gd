@@ -13,6 +13,7 @@ var _can_leave := false
 
 
 func _ready() -> void:
+	SoundManager.play_music("ending", SoundManager.MUSIC_FADE, false)
 	GameState.delete_save()
 	background.pivot_offset = background.size * 0.5
 	background.scale = Vector2(1.30, 1.30)

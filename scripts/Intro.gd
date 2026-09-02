@@ -16,6 +16,7 @@ var is_leaving := false
 
 
 func _ready() -> void:
+	SoundManager.play_music("intro")
 	graduation.modulate.a = 1.0
 	job_offer.modulate.a = 0.0
 	first_jobber.modulate.a = 0.0

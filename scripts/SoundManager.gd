@@ -13,6 +13,8 @@ const MUSIC := {
 	"menu": preload("res://assets/audio/music/menu.mp3"),
 	"battle": preload("res://assets/audio/music/battle.mp3"),
 	"workphase": preload("res://assets/audio/music/workphase.mp3"),
+	"intro": preload("res://assets/audio/music/intro.mp3"),
+	"ending": preload("res://assets/audio/music/ending.mp3"),
 }
 
 ## Every key holds an Array of AudioStream so play_sfx() can pick a random
@@ -109,14 +111,16 @@ func _ready() -> void:
 
 ## No-ops if this track is already playing so scene transitions between
 ## screens sharing a track (e.g. re-entering Options) don't restart it.
-func play_music(key: String, fade: float = MUSIC_FADE) -> void:
+## `loop` is false for one-shot cues like the ending theme, which should
+## play through once and stop rather than repeat.
+func play_music(key: String, fade: float = MUSIC_FADE, loop: bool = true) -> void:
 	if key == _current_music and _music_player.playing:
 		return
 	var stream: AudioStream = MUSIC.get(key)
 	if stream == null:
 		return
 	_current_music = key
-	stream.loop = true
+	stream.loop = loop
 
 	if _music_player.playing:
 		var t := create_tween()

@@ -131,9 +131,13 @@ func _ready() -> void:
 	bite_button.mouse_entered.connect(_show_hint.bind("A free way to keep going when you're out of Energy and items."))
 	bite_button.mouse_exited.connect(_clear_hint)
 	_setup_sprites()
-	_refresh(true)
 
+	## Must exist before the first _refresh(true) below - _refresh_buttons()
+	## reads _pause.is_open() to keep every action button disabled while paused.
 	_pause = PauseOverlay.attach(self, _quit_to_menu)
+	_pause.state_changed.connect(_on_pause_state_changed)
+
+	_refresh(true)
 
 	_say("%s\n%s" % [String(_enemy["intro"]), "Pick your words carefully."])
 
@@ -341,7 +345,7 @@ func _build_backpack_slot(id: String, item: Dictionary) -> Control:
 
 
 func _open_backpack() -> void:
-	if _busy or _over:
+	if _busy or _over or _pause.is_open():
 		return
 	SoundManager.play_sfx("click")
 	_backpack_overlay.visible = true
@@ -367,7 +371,7 @@ func _refresh_backpack() -> void:
 		var count_label: Label = slot["count"]
 		var count := GameState.item_count(id)
 		count_label.text = "x%d" % count
-		var blocked := _over or _busy or count <= 0
+		var blocked := _over or _busy or _pause.is_open() or count <= 0
 		btn.disabled = blocked
 		icon.modulate = Color(1, 1, 1, 1) if not blocked else Color(1, 1, 1, 0.35)
 
@@ -406,7 +410,7 @@ func _refresh_buttons() -> void:
 		var uses := int(_word_uses.get(id, 0))
 		if uses > 0:
 			out_of_words = false
-		var blocked := _over or _busy or _silenced == id or uses <= 0 or GameState.energy < int(word["cost"])
+		var blocked := _over or _busy or _pause.is_open() or _silenced == id or uses <= 0 or GameState.energy < int(word["cost"])
 		btn.disabled = blocked
 		var suffix := "  (silenced)" if _silenced == id else ""
 		btn.text = "%s%s  (%d/%d)\n%d Energy" % [
@@ -417,14 +421,21 @@ func _refresh_buttons() -> void:
 	for id: String in GameData.ITEMS:
 		total_items += GameState.item_count(id)
 	_backpack_button.text = "Open Backpack  (%d items)" % total_items
-	_backpack_button.disabled = _over or _busy
+	_backpack_button.disabled = _over or _busy or _pause.is_open()
 	if _backpack_overlay.visible:
 		_refresh_backpack()
 
-	bite_button.disabled = _over or _busy
+	bite_button.disabled = _over or _busy or _pause.is_open()
 
 	_apologize_button.visible = out_of_words
-	_apologize_button.disabled = _over or _busy or GameState.energy < APOLOGIZE_COST
+	_apologize_button.disabled = _over or _busy or _pause.is_open() or GameState.energy < APOLOGIZE_COST
+
+
+## Keeps every action button's disabled state in sync the instant the pause
+## panel opens/closes, rather than waiting for the next unrelated refresh -
+## mirrors WorkPhase.gd's _on_pause_state_changed().
+func _on_pause_state_changed(_is_open: bool) -> void:
+	_refresh_buttons()
 
 
 # ------------------------------------------------------------------ state ---
@@ -468,7 +479,7 @@ func _say(text: String) -> void:
 # ---------------------------------------------------------------- actions ---
 
 func _on_word_pressed(id: String) -> void:
-	if _busy or _over:
+	if _busy or _over or _pause.is_open():
 		return
 	var word := GameData.word_by_id(id)
 	if int(_word_uses.get(id, 0)) <= 0:
@@ -544,7 +555,7 @@ func _on_word_pressed(id: String) -> void:
 
 
 func _on_bite_pressed() -> void:
-	if _busy or _over:
+	if _busy or _over or _pause.is_open():
 		return
 
 	SoundManager.play_sfx("click")
@@ -572,7 +583,7 @@ func _on_bite_pressed() -> void:
 ## together let repeated Apologizing inflate a word's ceiling indefinitely
 ## (e.g. 0/2 -> 2/4 -> 4/6...), which defeated the point of WORD_USES_CAP.
 func _on_apologize_pressed() -> void:
-	if _busy or _over:
+	if _busy or _over or _pause.is_open():
 		return
 	if not GameState.spend_energy(APOLOGIZE_COST):
 		return
@@ -594,7 +605,7 @@ func _on_apologize_pressed() -> void:
 
 
 func _on_item_pressed(id: String) -> void:
-	if _busy or _over:
+	if _busy or _over or _pause.is_open():
 		return
 	if not GameState.consume_item(id):
 		return

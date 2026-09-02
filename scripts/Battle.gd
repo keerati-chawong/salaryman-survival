@@ -73,6 +73,20 @@ var _silenced := ""
 var _interrupted := false
 var _enemy_guarding := false
 
+## Sandwich's percentage guard - stacks on top of headphones' halving (see
+## _consume_guard_pct()), independently tracked, same "only ticks down on a
+## turn that actually lands damage" rule.
+var _guard_pct_amount := 0.0
+var _guard_pct_turns_left := 0
+## Apple's on-hit Energy bonus (see _apply_energy_on_hit_bonus()).
+var _energy_on_hit_bonus := 0
+var _energy_on_hit_turns_left := 0
+## Banana/Cola/Energy Bar's one-shot next-attack buffs, consumed the next
+## time a word attack actually lands damage (see _on_word_pressed()) - not
+## spent on an attack an enemy guard stance fully blocks.
+var _next_atk_pct := 0.0
+var _next_atk_flat := 0
+
 var _word_buttons: Dictionary = {}
 var _word_uses: Dictionary = {}
 var _word_max_uses: Dictionary = {}
@@ -489,6 +503,12 @@ func _on_word_pressed(id: String) -> void:
 		base = int(base * 0.6)
 		_interrupted = false
 	var dealt := int(base * mult)
+	var buffed := false
+	if not is_equal_approx(mult, GameData.IMMUNE) and (_next_atk_flat > 0 or _next_atk_pct > 0.0):
+		dealt = int((dealt + _next_atk_flat) * (1.0 + _next_atk_pct))
+		_next_atk_flat = 0
+		_next_atk_pct = 0.0
+		buffed = true
 
 	var lines: Array = word["lines"]
 	_say('"%s"' % String(lines[randi() % lines.size()]))
@@ -505,7 +525,12 @@ func _on_word_pressed(id: String) -> void:
 		_say("%s doesn't even register it." % String(_enemy["name"]))
 	else:
 		SoundManager.play_sfx("player_hit")
-		_popup("-%d %s" % [dealt, label], true, GameData.effectiveness_color(mult))
+		var parts: Array[String] = ["-%d" % dealt]
+		if label != "":
+			parts.append(label)
+		if buffed:
+			parts.append("Boosted!")
+		_popup(" ".join(parts), true, GameData.effectiveness_color(mult))
 		_recoil("enemy", 34.0)
 		if mult >= GameData.CRITICAL_AT:
 			_flash(Color(1.0, 0.9, 0.4), 0.42, 0.3)
@@ -594,6 +619,24 @@ func _on_item_pressed(id: String) -> void:
 			_guard_turns_left = 2
 			_say("%s on. Whatever they say for the next two turns lands softer." % name)
 			_tint(player_sprite, Color(0.62, 0.78, 1.25), 0.5)
+		"atk_pct":
+			_next_atk_pct = float(item["amount"]) / 100.0
+			_say("%s. %s." % [name, blurb])
+			_tint(player_sprite, Color(1.3, 0.65, 0.55), 0.5)
+		"atk_flat":
+			_next_atk_flat = int(item["amount"])
+			_say("%s. %s." % [name, blurb])
+			_tint(player_sprite, Color(1.3, 0.65, 0.55), 0.5)
+		"energy_on_hit":
+			_energy_on_hit_bonus = int(item["amount"])
+			_energy_on_hit_turns_left = int(item.get("duration", 3))
+			_say("%s. %s." % [name, blurb])
+			_tint(player_sprite, Color(1.1, 0.85, 1.3), 0.5)
+		"guard_pct":
+			_guard_pct_amount = float(item["amount"]) / 100.0
+			_guard_pct_turns_left = int(item.get("duration", 4))
+			_say("%s. %s." % [name, blurb])
+			_tint(player_sprite, Color(0.7, 0.9, 1.25), 0.5)
 
 	var hop := create_tween()
 	hop.tween_property(self, "_player_offset", Vector2(0.0, -28.0), 0.15).set_trans(Tween.TRANS_QUAD)
@@ -621,7 +664,8 @@ func _enemy_turn() -> void:
 			var dmg_range: Array = _enemy["damage"]
 			var dmg := randi_range(int(dmg_range[0]), int(dmg_range[1]))
 			dmg = int(dmg * [0.75, 1.0, 1.3][clampi(Settings.difficulty, 0, 2)])
-			dmg = int(dmg * _consume_guard())
+			dmg = int(dmg * _consume_guard() * _consume_guard_pct())
+			var energy_bonus := _apply_energy_on_hit_bonus()
 
 			var taunts: Array = _enemy["taunts"]
 			_say('"%s"' % String(taunts[randi() % taunts.size()]))
@@ -632,7 +676,10 @@ func _enemy_turn() -> void:
 
 			GameState.add_patience(-dmg)
 			GameState.add_energy(ENERGY_ON_HIT)
-			_popup("-%d" % dmg, false, Color(1.0, 0.5, 0.45))
+			var dmg_text := "-%d" % dmg
+			if energy_bonus > 0:
+				dmg_text += "  (+%d Energy)" % energy_bonus
+			_popup(dmg_text, false, Color(1.0, 0.5, 0.45))
 			_recoil("player", -40.0)
 			_flash(Color(0.9, 0.2, 0.2), 0.3, 0.3)
 			_shake(10.0, 0.3)
@@ -666,6 +713,27 @@ func _consume_guard() -> float:
 	return 0.5
 
 
+## Sandwich's percentage guard - stacks multiplicatively with _consume_guard()
+## at every call site, ticking down independently under the same rule.
+func _consume_guard_pct() -> float:
+	if _guard_pct_turns_left <= 0:
+		return 1.0
+	_guard_pct_turns_left -= 1
+	return 1.0 - _guard_pct_amount
+
+
+## Apple's on-hit Energy bonus - triggers alongside guard mitigation, on any
+## turn that actually lands Patience damage. Returns the bonus granted (0 if
+## inactive) so call sites can fold it into their own damage popup rather than
+## fighting the single shared DamagePopup label over the same turn.
+func _apply_energy_on_hit_bonus() -> int:
+	if _energy_on_hit_turns_left <= 0:
+		return 0
+	_energy_on_hit_turns_left -= 1
+	GameState.add_energy(_energy_on_hit_bonus)
+	return _energy_on_hit_bonus
+
+
 func _enter_guard_stance() -> void:
 	_enemy_guarding = true
 	_say("%s squares up and stops listening. (Guarding - your next line will be fully blocked.)" % String(_enemy["name"]))
@@ -688,11 +756,15 @@ func _try_skill() -> bool:
 
 	match skill:
 		"pile_on":
-			var chip := int(10 * _consume_guard())
+			var chip := int(10 * _consume_guard() * _consume_guard_pct())
 			GameState.add_patience(-chip)
 			GameState.add_energy(ENERGY_ON_HIT)
+			var energy_bonus := _apply_energy_on_hit_bonus()
 			_say("Pile On - another 'small favour' lands on your desk.")
-			_popup("-%d" % chip, false, Color(1.0, 0.6, 0.4))
+			var chip_text := "-%d" % chip
+			if energy_bonus > 0:
+				chip_text += "  (+%d Energy)" % energy_bonus
+			_popup(chip_text, false, Color(1.0, 0.6, 0.4))
 		"interrupt":
 			_interrupted = true
 			_say("Cut You Off - your next line loses its edge.")
@@ -712,11 +784,15 @@ func _try_skill() -> bool:
 			_say("Gaslighting - \"I never said that.\" Your energy wavers.")
 			_popup("-%d Energy" % drain, false, Color(0.85, 0.7, 1.0))
 		"after_hours_ping":
-			var chip := int(12 * _consume_guard())
+			var chip := int(12 * _consume_guard() * _consume_guard_pct())
 			GameState.add_patience(-chip)
 			GameState.add_energy(-8)
+			var energy_bonus := _apply_energy_on_hit_bonus()
 			_say("After-Hours Ping - \"Sorry to bug you at 9pm, quick one!\"")
-			_popup("-%d, -8 Energy" % chip, false, Color(1.0, 0.55, 0.35))
+			var chip_text := "-%d, -8 Energy" % chip
+			if energy_bonus > 0:
+				chip_text += "  (+%d Energy)" % energy_bonus
+			_popup(chip_text, false, Color(1.0, 0.55, 0.35))
 		"urgent_no_brief":
 			var pool: Array = []
 			for w: Dictionary in GameData.WORDS:

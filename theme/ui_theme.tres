@@ -107,10 +107,6 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
-[sub_resource type="SystemFont" id="num_font"]
-font_names = PackedStringArray("Segoe UI", "Roboto", "DejaVu Sans", "Helvetica Neue", "Arial", "sans-serif")
-font_weight = 600
-
 [sub_resource type="StyleBoxFlat" id="opt_hover"]
 content_margin_left = 12.0
 content_margin_top = 7.0
@@ -254,7 +250,7 @@ NumberLabel/colors/font_color = Color(0.96, 0.97, 0.99, 1)
 NumberLabel/colors/font_outline_color = Color(0, 0, 0, 0.8)
 NumberLabel/constants/outline_size = 1
 NumberLabel/font_sizes/font_size = 22
-NumberLabel/fonts/font = SubResource("num_font")
+NumberLabel/fonts/font = ExtResource("1_pixel_font")
 OptionButton/colors/font_color = Color(0.94, 0.95, 0.96, 1)
 OptionButton/colors/font_disabled_color = Color(0.45, 0.45, 0.48, 1)
 OptionButton/colors/font_hover_color = Color(1, 0.9, 0.6, 1)

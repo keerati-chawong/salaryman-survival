@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://c0uetray5m68c" path="res://scripts/Battle.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cjwmxap5e1jpk" path="res://assets/backgrounds/combat_room_ui_match.png" id="2_bg"]
-[ext_resource type="Texture2D" uid="uid://neuhavnah4j5" path="res://assets/characters/player.png" id="3_player"]
+[ext_resource type="Texture2D" uid="uid://b0pxjueuldevf" path="res://assets/characters/playerv2.png" id="4_0y4rl"]
 [ext_resource type="Texture2D" uid="uid://cwx3ij3gqlwr1" path="res://assets/characters/shadow.png" id="4_shadow"]
 [ext_resource type="Texture2D" uid="uid://bnkaks7nlpkxq" path="res://assets/item/coin.png" id="5_coin"]
 
@@ -18,6 +18,8 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_script")
 
 [node name="Background" type="TextureRect" parent="." unique_id=1568470675]
@@ -53,21 +55,21 @@ expand_mode = 1
 [node name="Enemy" type="TextureRect" parent="." unique_id=462140815]
 layout_mode = 0
 offset_left = 1023.0
-offset_top = 152.0
-offset_right = 1204.0
-offset_bottom = 485.0
+offset_top = 95.0
+offset_right = 1284.0
+offset_bottom = 575.18225
 pivot_offset = Vector2(90.5, 333)
 mouse_filter = 2
 expand_mode = 1
 
 [node name="Player" type="TextureRect" parent="." unique_id=180832423]
 layout_mode = 0
-offset_left = 327.0
-offset_top = 403.0
-offset_right = 494.0
-offset_bottom = 726.0
+offset_left = 236.0
+offset_top = 327.0
+offset_right = 551.0
+offset_bottom = 936.25146
 mouse_filter = 2
-texture = ExtResource("3_player")
+texture = ExtResource("4_0y4rl")
 expand_mode = 1
 
 [node name="EnemyPanel" type="PanelContainer" parent="." unique_id=1861167117]
@@ -207,10 +209,10 @@ theme_override_constants/separation = 16
 
 [node name="RankLabel" type="Label" parent="PlayerPanel/Cols/Bars/BottomRow" unique_id=1389986084]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
 text = "Rank: Intern"
-size_flags_horizontal = 3
 
 [node name="CoinIcon" type="TextureRect" parent="PlayerPanel/Cols/Bars/BottomRow" unique_id=1389986085]
 custom_minimum_size = Vector2(20, 20)
@@ -287,7 +289,7 @@ alignment = 2
 layout_mode = 2
 theme_type_variation = &"SmallLabel"
 theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 1)
-text = "Esc - save & quit to menu"
+text = "Esc or Menu (top-right) - pause"
 vertical_alignment = 1
 
 [node name="DamagePopup" type="Label" parent="." unique_id=104471779]
@@ -305,6 +307,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0)
 metadata/_edit_lock_ = true
